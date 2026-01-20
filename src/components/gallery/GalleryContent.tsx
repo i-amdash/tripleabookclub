@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -26,7 +26,7 @@ export function GalleryContent() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const galleryRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchGallery = async () => {
@@ -46,7 +46,7 @@ export function GalleryContent() {
 
     fetchGallery()
     checkAuth()
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     if (!galleryRef.current || loading) return
@@ -361,7 +361,7 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

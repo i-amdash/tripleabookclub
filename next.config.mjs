@@ -13,6 +13,15 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Suppress the "Serializing big strings" warning in development
+      config.infrastructureLogging = {
+        level: 'error',
+      }
+    }
+    return config
+  },
 };
 
 export default nextConfig;

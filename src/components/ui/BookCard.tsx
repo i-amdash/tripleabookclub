@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { BookOpen, User, Vote } from 'lucide-react'
 import { Book, Suggestion } from '@/types/database.types'
-import { cn, truncateText } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface BookCardProps {
   book: Book | Suggestion
@@ -31,16 +31,16 @@ export function BookCard({
       whileHover={{ y: -8 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
       className={cn(
-        'group relative perspective-1000',
+        'group relative perspective-1000 h-full',
         variant === 'featured' && 'md:col-span-2'
       )}
       onClick={onClick}
     >
-      <div className="relative card card-hover overflow-hidden cursor-pointer">
+      <div className="relative card card-hover overflow-hidden cursor-pointer h-full flex flex-col">
         {/* Book cover image */}
         <div
           className={cn(
-            'relative aspect-[3/4] overflow-hidden rounded-xl mb-4',
+            'relative aspect-[3/4] overflow-hidden rounded-xl mb-4 flex-shrink-0',
             variant === 'featured' && 'md:aspect-[4/5]'
           )}
         >
@@ -84,23 +84,27 @@ export function BookCard({
         </div>
 
         {/* Book info */}
-        <div className="space-y-2">
+        <div className="flex flex-col flex-1">
           <h3
             className={cn(
-              'font-display font-bold text-white group-hover:text-gradient transition-all duration-300',
+              'font-display font-bold text-white group-hover:text-gradient transition-all duration-300 line-clamp-2 min-h-[2.5rem]',
               variant === 'featured' ? 'text-2xl' : 'text-lg'
             )}
           >
-            {truncateText(book.title, 50)}
+            {book.title}
           </h3>
 
-          <div className="flex items-center gap-2 text-white/60">
-            <User className="w-4 h-4" />
-            <span className="text-sm">{book.author}</span>
+          <div className="flex items-center gap-2 text-white/60 mt-2">
+            <User className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm truncate">{book.author}</span>
           </div>
 
-          <p className="text-white/50 text-sm leading-relaxed">
-            {truncateText(book.synopsis, variant === 'featured' ? 200 : 100)}
+          <p className="text-white/50 text-sm leading-relaxed mt-2 line-clamp-3 flex-1">
+            {book.synopsis}
+          </p>
+
+          <p className="text-white/50 text-sm leading-relaxed mt-2 line-clamp-3 flex-1">
+            {book.synopsis}
           </p>
 
           {/* Vote button for suggestions */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit2, Trash2, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Book, BookCategory } from '@/types/database.types'
@@ -15,7 +15,7 @@ export function BooksManager() {
   const [editingBook, setEditingBook] = useState<Book | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchBooks()

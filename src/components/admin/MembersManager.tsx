@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit2, Trash2, User, Eye, EyeOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Member } from '@/types/database.types'
@@ -14,7 +14,7 @@ export function MembersManager() {
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchMembers()

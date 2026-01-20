@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <div className="container-main max-w-3xl">
         <PageHeader
           title="Privacy Policy"
-          description="Last updated: January 2024"
+          description="Last updated: January 2026"
         />
 
         <div className="prose prose-invert max-w-none">
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
               <h2 className="text-xl font-semibold text-white mb-4">3. Data Security</h2>
               <p>
                 We implement appropriate security measures to protect your personal information. 
-                Your data is stored securely using Supabase's infrastructure, which includes 
+                Your data is stored securely using our infrastructure, which includes 
                 encryption and secure data handling practices.
               </p>
             </section>

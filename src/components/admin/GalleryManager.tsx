@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit2, Trash2, Image as ImageIcon, Video, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { GalleryItem } from '@/types/database.types'
@@ -14,7 +14,7 @@ export function GalleryManager() {
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchItems()

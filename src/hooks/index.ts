@@ -1,13 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/lib/store'
 import { Profile } from '@/types/database.types'
 
+// Hook to detect if component has mounted (for hydration safety)
+export function useHasMounted() {
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  return hasMounted
+}
+
 export function useAuth() {
   const { user, isLoading, setUser, setLoading } = useAuthStore()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const hasMounted = useHasMounted()
 
   useEffect(() => {
     const getUser = async () => {
@@ -53,12 +65,12 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [supabase, setUser, setLoading])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
-  }
+  }, [supabase])
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -67,31 +79,33 @@ export function useAuth() {
       },
     })
     return { data, error }
-  }
+  }, [supabase])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setUser(null)
-  }
+  }, [supabase, setUser])
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin'
   const isSuperAdmin = user?.role === 'super_admin'
 
   return {
     user,
-    isLoading,
+    // Only show loading state after mount to avoid hydration mismatch
+    isLoading: hasMounted ? isLoading : false,
     isAdmin,
     isSuperAdmin,
     signIn,
     signUp,
     signOut,
+    hasMounted,
   }
 }
 
 export function useBooks(category?: 'fiction' | 'non-fiction', month?: number, year?: number) {
   const [books, setBooks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchBooks = async () => {
@@ -119,7 +133,7 @@ export function useSuggestions(month: number, year: number, category: 'fiction' 
   const [loading, setLoading] = useState(true)
   const [userSuggestionCount, setUserSuggestionCount] = useState(0)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -150,7 +164,7 @@ export function useSuggestions(month: number, year: number, category: 'fiction' 
 export function useGallery() {
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchGallery = async () => {
@@ -172,7 +186,7 @@ export function useGallery() {
 export function useMembers() {
   const [members, setMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -195,7 +209,7 @@ export function useMembers() {
 export function usePortalStatus(month: number, year: number, category: 'fiction' | 'non-fiction') {
   const [status, setStatus] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchStatus = async () => {

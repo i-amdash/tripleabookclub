@@ -22,7 +22,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const pathname = usePathname()
-  const { user, isLoading, isAdmin, signOut } = useAuth()
+  const { user, isLoading, isAdmin, signOut, hasMounted } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,63 +93,66 @@ export function Navbar() {
                 ))}
               </ul>
 
-              {/* Auth Section */}
-              {!isLoading && (
-                <div className="flex items-center gap-3">
-                  {user ? (
-                    <div className="relative">
-                      <button
-                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center">
-                          <User className="w-4 h-4 text-primary-400" />
-                        </div>
-                        <span className="text-sm text-white/80 hidden xl:block">
-                          {user.full_name || 'Member'}
-                        </span>
-                      </button>
+              {/* Auth Section - Render consistent state on SSR/initial render, then update after hydration */}
+              <div className="flex items-center gap-3">
+                {!hasMounted ? (
+                  // Always show Sign In on SSR and initial render to prevent hydration mismatch
+                  <Link href="/auth/login" className="btn-primary text-sm">
+                    Sign In
+                  </Link>
+                ) : user ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary-500/20 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary-400" />
+                      </div>
+                      <span className="text-sm text-white/80 hidden xl:block">
+                        {user.full_name || 'Member'}
+                      </span>
+                    </button>
 
-                      <AnimatePresence>
-                        {isUserMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute right-0 mt-2 w-48 py-2 glass rounded-xl shadow-xl"
-                          >
-                            {isAdmin && (
-                              <Link
-                                href="/admin"
-                                className="flex items-center gap-2 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                                onClick={() => setIsUserMenuOpen(false)}
-                              >
-                                <Settings className="w-4 h-4" />
-                                Admin Dashboard
-                              </Link>
-                            )}
-                            <button
-                              onClick={() => {
-                                signOut()
-                                setIsUserMenuOpen(false)
-                              }}
-                              className="flex items-center gap-2 w-full px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                    <AnimatePresence>
+                      {isUserMenuOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 mt-2 w-48 py-2 glass rounded-xl shadow-xl"
+                        >
+                          {isAdmin && (
+                            <Link
+                              href="/admin"
+                              className="flex items-center gap-2 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                              onClick={() => setIsUserMenuOpen(false)}
                             >
-                              <LogOut className="w-4 h-4" />
-                              Sign Out
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  ) : (
-                    <Link href="/auth/login" className="btn-primary text-sm">
-                      Sign In
-                    </Link>
-                  )}
-                </div>
-              )}
+                              <Settings className="w-4 h-4" />
+                              Admin Dashboard
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => {
+                              signOut()
+                              setIsUserMenuOpen(false)
+                            }}
+                            className="flex items-center gap-2 w-full px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Sign Out
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <Link href="/auth/login" className="btn-primary text-sm">
+                    Sign In
+                  </Link>
+                )}
+              </div>
             </div>
 
             {/* Mobile Menu Button */}
@@ -206,7 +209,7 @@ export function Navbar() {
                   transition={{ delay: navLinks.length * 0.1 }}
                   className="mt-8"
                 >
-                  {user ? (
+                  {hasMounted && user ? (
                     <div className="flex flex-col items-center gap-4">
                       {isAdmin && (
                         <Link href="/admin" className="btn-secondary">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Calendar, BookOpen, BookMarked, Lock, Unlock, Vote } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { PortalStatus } from '@/types/database.types'
@@ -12,7 +12,7 @@ export function PortalManager() {
   const [statuses, setStatuses] = useState<PortalStatus[]>([])
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { month, year } = getCurrentMonthYear()
   const nextMonth = getNextMonth(month, year)
 

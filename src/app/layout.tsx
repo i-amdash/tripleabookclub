@@ -70,7 +70,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable}`}>
-      <body className="font-sans">
+      <body className="font-sans" suppressHydrationWarning>
         <SmoothScroll>
           <div className="relative min-h-screen flex flex-col">
             {/* Background elements */}

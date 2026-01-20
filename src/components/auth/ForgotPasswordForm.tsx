@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Input, Button } from '@/components/ui'
@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState('')
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

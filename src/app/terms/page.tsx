@@ -11,7 +11,7 @@ export default function TermsPage() {
       <div className="container-main max-w-3xl">
         <PageHeader
           title="Terms of Service"
-          description="Last updated: January 2024"
+          description="Last updated: January 2026"
         />
 
         <div className="prose prose-invert max-w-none">

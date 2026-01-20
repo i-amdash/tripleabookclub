@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
@@ -12,28 +12,54 @@ import { getMonthName, getCurrentMonthYear } from '@/lib/utils'
 export function FeaturedBooks() {
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  const supabase = useMemo(() => createClient(), [])
+  const { month, year } = getCurrentMonthYear()
 
   useEffect(() => {
-    const fetchBooks = async () => {
-      const supabase = createClient()
-      const { month, year } = getCurrentMonthYear()
-      
-      // Get current month's fiction book and current period's non-fiction book
-      const { data } = await supabase
-        .from('books')
-        .select('*')
-        .eq('is_selected', true)
-        .order('created_at', { ascending: false })
-        .limit(4)
+    setMounted(true)
+  }, [])
 
-      setBooks(data || [])
-      setLoading(false)
+  useEffect(() => {
+    if (!mounted) return
+
+    const fetchBooks = async () => {
+      try {
+        // Get current month's fiction book
+        const { data: fictionBook } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'fiction')
+          .eq('month', month)
+          .eq('year', year)
+          .eq('is_selected', true)
+          .limit(1)
+
+        // Get current period's non-fiction book (bi-monthly)
+        const { data: nonFictionBook } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'non-fiction')
+          .eq('is_selected', true)
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .limit(1)
+
+        const currentBooks = [
+          ...(fictionBook || []),
+          ...(nonFictionBook || [])
+        ]
+
+        setBooks(currentBooks)
+      } catch (error) {
+        console.warn('Error fetching books:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchBooks()
-  }, [])
-
-  const { month, year } = getCurrentMonthYear()
+  }, [supabase, month, year, mounted])
 
   return (
     <section className="section-padding relative overflow-hidden">
@@ -47,9 +73,9 @@ export function FeaturedBooks() {
           description={`Discover what we're reading this ${getMonthName(month)} ${year}. Join the conversation and share your thoughts.`}
         />
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid ${books.length <= 2 ? 'md:grid-cols-2 max-w-2xl mx-auto' : 'md:grid-cols-2 lg:grid-cols-4'} gap-6`}>
           {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
+            ? Array.from({ length: 2 }).map((_, i) => (
                 <BookCardSkeleton key={i} />
               ))
             : books.map((book, index) => (
@@ -60,10 +86,7 @@ export function FeaturedBooks() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <BookCard
-                    book={book}
-                    variant={index === 0 ? 'featured' : 'default'}
-                  />
+                  <BookCard book={book} />
                 </motion.div>
               ))}
         </div>

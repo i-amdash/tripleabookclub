@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Save, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { SiteContent } from '@/types/database.types'
@@ -19,7 +19,7 @@ export function ContentManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchContents()

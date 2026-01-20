@@ -1,44 +1,130 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import gsap from 'gsap'
-import { ArrowRight, BookOpen, Users, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, Users, Sparkles, User } from 'lucide-react'
 import { Button } from '@/components/ui'
+import { createClient } from '@/lib/supabase/client'
+import { Book, Profile } from '@/types/database.types'
+import { getCurrentMonthYear, getMonthName } from '@/lib/utils'
 
 export function Hero() {
   const heroRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const [currentBook, setCurrentBook] = useState<Book | null>(null)
+  const [randomMembers, setRandomMembers] = useState<Profile[]>([])
+  const [memberCount, setMemberCount] = useState(20)
+  const [mounted, setMounted] = useState(false)
+  const supabase = useMemo(() => createClient(), [])
+  const { month, year } = getCurrentMonthYear()
 
   useEffect(() => {
-    if (!heroRef.current) return
-
-    const ctx = gsap.context(() => {
-      // Animate floating elements
-      gsap.to('.float-element', {
-        y: -20,
-        duration: 2,
-        ease: 'power1.inOut',
-        yoyo: true,
-        repeat: -1,
-        stagger: 0.3,
-      })
-
-      // Animate background blobs
-      gsap.to('.blob', {
-        scale: 1.1,
-        duration: 4,
-        ease: 'power1.inOut',
-        yoyo: true,
-        repeat: -1,
-        stagger: 0.5,
-      })
-    }, heroRef)
-
-    return () => ctx.revert()
+    setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    // Fetch current month's fiction book, or latest if not found
+    const fetchCurrentBook = async () => {
+      try {
+        // First try to get current month's book
+        let { data } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'fiction')
+          .eq('month', month)
+          .eq('year', year)
+          .eq('is_selected', true)
+        .maybeSingle()
+        // If no book for current month, get the latest selected fiction book
+        if (!data) {
+          const { data: latestBook } = await supabase
+            .from('books')
+            .select('*')
+            .eq('category', 'fiction')
+            .eq('is_selected', true)
+            .order('year', { ascending: false })
+            .order('month', { ascending: false })
+            .limit(1)
+          .maybeSingle()
+          data = latestBook
+        }
+
+        if (data) {
+          setCurrentBook(data)
+        }
+      } catch (error) {
+        console.warn('Error fetching current book:', error)
+      }
+    }
+
+    // Fetch random members for avatars
+    const fetchRandomMembers = async () => {
+      try {
+        const { data, count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact' })
+          .not('avatar_url', 'is', null)
+          .limit(10)
+
+        if (data) {
+          // Shuffle and take 3 random members
+          const shuffled = [...data].sort(() => Math.random() - 0.5)
+          setRandomMembers(shuffled.slice(0, 3))
+        }
+        if (count) {
+          setMemberCount(count)
+        }
+      } catch (error) {
+        console.warn('Error fetching members:', error)
+      }
+    }
+
+    fetchCurrentBook()
+    fetchRandomMembers()
+  }, [supabase, month, year, mounted])
+
+  useEffect(() => {
+    if (!heroRef.current || !mounted) return
+
+    // Dynamically import GSAP to avoid SSR issues
+    const initAnimations = async () => {
+      try {
+        const gsap = (await import('gsap')).default
+        
+        const ctx = gsap.context(() => {
+          // Animate floating elements
+          gsap.to('.float-element', {
+            y: -20,
+            duration: 2,
+            ease: 'power1.inOut',
+            yoyo: true,
+            repeat: -1,
+            stagger: 0.3,
+          })
+
+          // Animate background blobs
+          gsap.to('.blob', {
+            scale: 1.1,
+            duration: 4,
+            ease: 'power1.inOut',
+            yoyo: true,
+            repeat: -1,
+            stagger: 0.5,
+          })
+        }, heroRef)
+
+        return () => ctx.revert()
+      } catch (error) {
+        console.warn('GSAP animation failed:', error)
+      }
+    }
+
+    initAnimations()
+  }, [mounted])
 
   return (
     <section
@@ -154,25 +240,45 @@ export function Hero() {
               {/* Main floating book */}
               <div className="float-element absolute inset-0 flex items-center justify-center">
                 <div className="relative w-64 h-80 perspective-1000">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-2xl shadow-primary-500/30 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                    <div className="absolute inset-2 border border-white/10 rounded-md" />
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <div className="h-2 bg-white/20 rounded mb-2" />
-                      <div className="h-2 bg-white/10 rounded w-2/3" />
+                  {currentBook?.image_url ? (
+                    <div className="absolute inset-0 rounded-lg shadow-2xl shadow-primary-500/30 transform rotate-3 hover:rotate-0 transition-transform duration-500 overflow-hidden">
+                      <Image
+                        src={currentBook.image_url}
+                        alt={currentBook.title}
+                        fill
+                        className="object-cover"
+                        sizes="256px"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                     </div>
-                  </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg shadow-2xl shadow-primary-500/30 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                      <div className="absolute inset-2 border border-white/10 rounded-md" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <BookOpen className="w-16 h-16 text-white/30" />
+                      </div>
+                      <div className="absolute bottom-6 left-6 right-6">
+                        <div className="h-2 bg-white/20 rounded mb-2" />
+                        <div className="h-2 bg-white/10 rounded w-2/3" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Floating cards */}
-              <div className="float-element absolute top-0 right-0 p-4 glass rounded-2xl shadow-xl">
+              <div className="float-element absolute top-0 right-0 p-4 glass rounded-2xl shadow-xl max-w-[200px]">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <BookOpen className="w-5 h-5 text-white" />
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-white">New Book</div>
-                    <div className="text-xs text-white/50">This Month</div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-white truncate">
+                      {currentBook?.title || 'New Book'}
+                    </div>
+                    <div className="text-xs text-white/50">
+                      {currentBook ? `${getMonthName(currentBook.month)} ${currentBook.year}` : `${getMonthName(month)} ${year}`}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -180,19 +286,54 @@ export function Hero() {
               <div className="float-element absolute bottom-10 -left-10 p-4 glass rounded-2xl shadow-xl">
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 border-2 border-dark-900"
-                      />
-                    ))}
+                    {randomMembers.length > 0 ? (
+                      randomMembers.map((member) => (
+                        <div
+                          key={member.id}
+                          className="w-8 h-8 rounded-full border-2 border-dark-900 overflow-hidden bg-dark-800"
+                        >
+                          {member.avatar_url ? (
+                            <Image
+                              src={member.avatar_url}
+                              alt={member.full_name || 'Member'}
+                              width={32}
+                              height={32}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center">
+                              <User className="w-4 h-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      [1, 2, 3].map((i) => (
+                        <div
+                          key={i}
+                          className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 border-2 border-dark-900"
+                        />
+                      ))
+                    )}
                   </div>
-                  <div className="text-sm text-white/80">+20 reading</div>
+                  <div className="text-sm text-white/80">+{memberCount} reading</div>
                 </div>
               </div>
 
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-primary-500/20 rounded-full blur-[100px]" />
+              {/* Glow effect - uses book cover as base when available */}
+              {currentBook?.image_url ? (
+                <div className="absolute inset-0 -z-10">
+                  <Image
+                    src={currentBook.image_url}
+                    alt=""
+                    fill
+                    className="object-cover blur-[100px] opacity-40 scale-150"
+                    sizes="512px"
+                  />
+                </div>
+              ) : (
+                <div className="absolute inset-0 bg-primary-500/20 rounded-full blur-[100px]" />
+              )}
             </div>
           </motion.div>
         </div>

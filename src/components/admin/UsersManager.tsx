@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Plus, Edit2, Trash2, User, Shield, ShieldOff, Mail, Key } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/types/database.types'
@@ -15,7 +15,7 @@ export function UsersManager() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchUsers()

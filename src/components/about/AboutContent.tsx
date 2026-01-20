@@ -58,7 +58,7 @@ export function AboutContent() {
         .from('site_content')
         .select('*')
         .eq('page', 'about')
-        .single() as { data: SiteContent | null }
+        .maybeSingle() as { data: SiteContent | null }
 
       if (data?.content) {
         setAboutData(data.content as unknown as AboutData)

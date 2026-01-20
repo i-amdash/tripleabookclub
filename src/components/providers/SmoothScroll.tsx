@@ -1,38 +1,66 @@
 'use client'
 
 import { useEffect, useRef, ReactNode } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ScrollSmoother } from 'gsap/ScrollSmoother'
-
-// Note: ScrollSmoother requires GSAP Club membership
-// If not available, smooth scroll will be handled by CSS
-gsap.registerPlugin(ScrollTrigger)
+import Lenis from 'lenis'
 
 interface SmoothScrollProps {
   children: ReactNode
 }
 
 export function SmoothScroll({ children }: SmoothScrollProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const lenisRef = useRef<Lenis | null>(null)
 
   useEffect(() => {
-    // Basic scroll trigger setup
-    ScrollTrigger.defaults({
-      markers: false,
+    // Initialize Lenis
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      touchMultiplier: 2,
     })
 
+    lenisRef.current = lenis
+
+    // RAF loop
+    function raf(time: number) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+
+    // Integrate with GSAP ScrollTrigger if available
+    const initScrollTrigger = async () => {
+      try {
+        const gsap = (await import('gsap')).default
+        const { ScrollTrigger } = await import('gsap/ScrollTrigger')
+        
+        gsap.registerPlugin(ScrollTrigger)
+
+        // Update ScrollTrigger on Lenis scroll
+        lenis.on('scroll', ScrollTrigger.update)
+
+        // Use Lenis requestAnimationFrame with GSAP ticker
+        gsap.ticker.add((time) => {
+          lenis.raf(time * 1000)
+        })
+
+        // Disable GSAP's lag smoothing
+        gsap.ticker.lagSmoothing(0)
+      } catch (error) {
+        // GSAP not available, continue without it
+      }
+    }
+
+    initScrollTrigger()
+
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill())
+      lenis.destroy()
+      lenisRef.current = null
     }
   }, [])
 
-  return (
-    <div ref={wrapperRef} id="smooth-wrapper">
-      <div ref={contentRef} id="smooth-content">
-        {children}
-      </div>
-    </div>
-  )
+  return <>{children}</>
 }

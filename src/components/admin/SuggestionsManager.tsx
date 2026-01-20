@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Check, X, BookOpen, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Suggestion } from '@/types/database.types'
@@ -12,7 +12,7 @@ export function SuggestionsManager() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     fetchSuggestions()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { BookOpen, Heart, MessageCircle, Star, Users, Calendar } from 'lucide-react'
 
@@ -45,37 +45,29 @@ const features = [
 
 export function HorizontalScroll() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [scrollWidth, setScrollWidth] = useState(3000)
-
-  useEffect(() => {
-    // Calculate total scroll width
-    const cardWidth = 350
-    const gap = 32
-    const totalCards = features.length + 2
-    const totalWidth = totalCards * cardWidth + (totalCards - 1) * gap + 100
-    setScrollWidth(totalWidth)
-  }, [])
+  const scrollerRef = useRef<HTMLDivElement>(null)
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
   })
 
-  const x = useTransform(
-    scrollYProgress,
-    [0, 1],
-    [0, -(scrollWidth - (typeof window !== 'undefined' ? window.innerWidth : 1200))]
-  )
+  // Calculate how far to scroll horizontally
+  // 8 cards (intro + 6 features + CTA) * 350px + gaps
+  const totalScrollDistance = (8 * 350) + (7 * 32) - (typeof window !== 'undefined' ? window.innerWidth : 1200) + 100
+
+  const x = useTransform(scrollYProgress, [0, 1], [0, -totalScrollDistance])
+  const progressWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
 
   return (
     <section
       ref={containerRef}
       className="relative"
-      style={{ height: `${scrollWidth}px` }}
+      style={{ height: '300vh' }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden">
+      <div className="sticky top-0 h-screen flex flex-col overflow-hidden">
         {/* Section header */}
-        <div className="absolute top-8 left-0 right-0 z-10 px-8">
+        <div className="flex-shrink-0 pt-8 px-8">
           <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
             <div>
               <span className="inline-block px-4 py-1.5 mb-2 text-xs font-semibold tracking-wider uppercase bg-primary-500/10 text-primary-400 rounded-full border border-primary-500/20">
@@ -90,7 +82,7 @@ export function HorizontalScroll() {
               <div className="w-20 h-0.5 bg-white/20 relative overflow-hidden">
                 <motion.div
                   className="absolute inset-y-0 left-0 bg-primary-500"
-                  style={{ width: useTransform(scrollYProgress, [0, 1], ['0%', '100%']) }}
+                  style={{ width: progressWidth }}
                 />
               </div>
             </div>
@@ -99,7 +91,8 @@ export function HorizontalScroll() {
 
         {/* Horizontal scroll wrapper */}
         <motion.div
-          className="flex items-center gap-8 h-full px-8 pt-24"
+          ref={scrollerRef}
+          className="flex items-center gap-8 flex-1 px-8"
           style={{ x }}
         >
           {/* Intro card */}
@@ -114,7 +107,7 @@ export function HorizontalScroll() {
 
           {/* Feature cards */}
           {features.map((feature, index) => (
-            <motion.div
+            <div
               key={feature.title}
               className="flex-shrink-0 w-[350px] h-[450px] card group hover:scale-105 transition-transform duration-500"
             >
@@ -138,7 +131,7 @@ export function HorizontalScroll() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
 
           {/* CTA card */}

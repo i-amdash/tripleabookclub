@@ -6,20 +6,20 @@ import { Quote } from 'lucide-react'
 const testimonials = [
   {
     quote: "Triple A Book Club has completely transformed my reading habits. The community is incredibly supportive and the book selections are always on point.",
-    author: "Sarah M.",
-    role: "Member since 2024",
+    author: "Victoria O.",
+    role: "Member since 2026",
     avatar: null,
   },
   {
     quote: "I love the voting system! It makes me feel like my voice matters in choosing our next read. Best book club I've ever been part of.",
-    author: "James K.",
-    role: "Member since 2024",
+    author: "Tobi B.",
+    role: "Member since 2026",
     avatar: null,
   },
   {
     quote: "The mix of fiction and non-fiction keeps things interesting. I've discovered so many amazing books I never would have picked up on my own.",
     author: "Amara O.",
-    role: "Member since 2024",
+    role: "Member since 2026",
     avatar: null,
   },
 ]
