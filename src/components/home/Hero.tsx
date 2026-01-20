@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, BookOpen, Users, Sparkles, User } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { Book, Profile } from '@/types/database.types'
 import { getCurrentMonthYear, getMonthName } from '@/lib/utils'
 
@@ -17,7 +17,7 @@ export function Hero() {
   const [randomMembers, setRandomMembers] = useState<Profile[]>([])
   const [memberCount, setMemberCount] = useState(20)
   const [mounted, setMounted] = useState(false)
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
   const { month, year } = getCurrentMonthYear()
 
   useEffect(() => {

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { User, Instagram, Twitter, Linkedin } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { Member } from '@/types/database.types'
 import { Skeleton } from '@/components/ui'
 
@@ -15,11 +15,10 @@ export function MembersContent() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
+  const supabase = useSupabase()
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const supabase = createClient()
-      
       const { data } = await supabase
         .from('members')
         .select('*')

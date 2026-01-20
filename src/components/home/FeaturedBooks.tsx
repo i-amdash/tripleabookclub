@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase, useHasMounted } from '@/hooks'
 import { Book } from '@/types/database.types'
 import { SectionHeader, BookCard, BookCardSkeleton, Button } from '@/components/ui'
 import { getMonthName, getCurrentMonthYear } from '@/lib/utils'
@@ -12,13 +12,9 @@ import { getMonthName, getCurrentMonthYear } from '@/lib/utils'
 export function FeaturedBooks() {
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const supabase = useMemo(() => createClient(), [])
+  const mounted = useHasMounted()
+  const supabase = useSupabase()
   const { month, year } = getCurrentMonthYear()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!mounted) return

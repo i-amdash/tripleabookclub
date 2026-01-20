@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { BookOpen, Users, Target, Heart, Calendar, MessageCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { SiteContent } from '@/types/database.types'
 
 interface AboutData {
@@ -49,11 +49,10 @@ const defaultValues = [
 export function AboutContent() {
   const [aboutData, setAboutData] = useState<AboutData | null>(null)
   const [loading, setLoading] = useState(true)
+  const supabase = useSupabase()
 
   useEffect(() => {
     const fetchAboutData = async () => {
-      const supabase = createClient()
-      
       const { data } = await supabase
         .from('site_content')
         .select('*')

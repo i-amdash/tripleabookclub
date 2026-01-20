@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, User, Shield, ShieldOff, Mail, Key } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { Profile } from '@/types/database.types'
 import { Button, Modal, Input, Skeleton } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -15,7 +15,7 @@ export function UsersManager() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   useEffect(() => {
     fetchUsers()

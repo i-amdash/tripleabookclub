@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Save, FileText } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { SiteContent } from '@/types/database.types'
 import { Button, Input, Textarea, Skeleton } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -19,7 +19,7 @@ export function ContentManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   useEffect(() => {
     fetchContents()

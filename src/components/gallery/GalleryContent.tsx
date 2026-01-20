@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Play, X, Image as ImageIcon, Video, ZoomIn, Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { GalleryItem } from '@/types/database.types'
 import { Tabs, TabPanel, Skeleton, Button, Modal, Input, Textarea, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -26,7 +26,7 @@ export function GalleryContent() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const galleryRef = useRef<HTMLDivElement>(null)
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   useEffect(() => {
     const fetchGallery = async () => {
@@ -361,7 +361,7 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Input, Button } from '@/components/ui'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import toast from 'react-hot-toast'
 
 export function ForgotPasswordForm() {
@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState('')
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,8 +32,13 @@ export function ForgotPasswordForm() {
     setIsLoading(true)
 
     try {
+      // Use production URL in production, otherwise use current origin
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://tripleabookclub.com' 
+        : window.location.origin
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: `${baseUrl}/auth/callback?type=recovery`,
       })
 
       if (error) throw error

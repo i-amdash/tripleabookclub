@@ -112,7 +112,7 @@ export function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm flex items-center gap-1">
               © {currentYear} Triple A Book Club. Made with 
-              <Heart className="w-4 h-4 text-primary-500 fill-primary-500" />
+              💛 
               for book lovers.
             </p>
             <ul className="flex items-center gap-6">

@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { BookOpen, BookMarked, Plus, Vote, User, Calendar } from 'lucide-react'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
 import { Book, Suggestion, PortalStatus } from '@/types/database.types'
-import { useAuth } from '@/hooks'
+import { useAuth, useSupabase } from '@/hooks'
 import { Tabs, TabPanel, BookCard, BookCardSkeleton, Button, Modal } from '@/components/ui'
 import { SuggestionForm } from './SuggestionForm'
 import { VotingSection } from './VotingSection'
@@ -33,7 +32,7 @@ export function BooksPageContent() {
   const userRef = useRef(user)
   userRef.current = user
   
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
   
   // Memoize date calculations to prevent re-renders
   const { month, year } = useMemo(() => getCurrentMonthYear(), [])
@@ -313,55 +312,109 @@ export function BooksPageContent() {
         size="lg"
       >
         {selectedBook && (
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Book Cover */}
-            <div className="flex-shrink-0 w-full md:w-64">
-              <div className="relative aspect-[3/4] rounded-xl overflow-hidden">
-                {selectedBook.image_url ? (
-                  <Image
-                    src={selectedBook.image_url}
-                    alt={selectedBook.title}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
-                    <BookOpen className="w-16 h-16 text-white/40" />
-                  </div>
-                )}
+          <div className="flex flex-col gap-6 max-h-[80vh] overflow-y-auto">
+            {/* Mobile: Horizontal layout with small cover */}
+            <div className="flex gap-4 md:hidden">
+              {/* Small Book Cover */}
+              <div className="flex-shrink-0 w-24">
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-lg">
+                  {selectedBook.image_url ? (
+                    <Image
+                      src={selectedBook.image_url}
+                      alt={selectedBook.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-white/40" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-
-            {/* Book Details */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full mb-3 ${
+              
+              {/* Title and meta */}
+              <div className="flex-1 min-w-0">
+                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full mb-2 ${
                   selectedBook.category === 'fiction'
                     ? 'bg-primary-500/20 text-primary-400'
                     : 'bg-accent-500/20 text-accent-400'
                 }`}>
                   {selectedBook.category === 'fiction' ? 'Fiction' : 'Non-Fiction'}
                 </span>
-                <h2 className="text-2xl md:text-3xl font-display font-bold text-white">
+                <h2 className="text-lg font-display font-bold text-white leading-tight mb-2">
                   {selectedBook.title}
                 </h2>
+                <div className="flex items-center gap-1.5 text-white/60 text-sm mb-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="truncate">{selectedBook.author}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-white/60 text-sm">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{getMonthName(selectedBook.month)} {selectedBook.year}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile: Synopsis */}
+            <div className="md:hidden">
+              <h4 className="text-sm font-semibold text-white/80 mb-2">Synopsis</h4>
+              <p className="text-white/60 text-sm leading-relaxed">
+                {selectedBook.synopsis || 'No synopsis available.'}
+              </p>
+            </div>
+
+            {/* Desktop: Original layout */}
+            <div className="hidden md:flex md:flex-row gap-8">
+              {/* Book Cover */}
+              <div className="flex-shrink-0 w-64">
+                <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-xl">
+                  {selectedBook.image_url ? (
+                    <Image
+                      src={selectedBook.image_url}
+                      alt={selectedBook.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center">
+                      <BookOpen className="w-16 h-16 text-white/40" />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 text-white/60">
-                <User className="w-4 h-4" />
-                <span>{selectedBook.author}</span>
-              </div>
+              {/* Book Details */}
+              <div className="flex-1 space-y-4">
+                <div>
+                  <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full mb-3 ${
+                    selectedBook.category === 'fiction'
+                      ? 'bg-primary-500/20 text-primary-400'
+                      : 'bg-accent-500/20 text-accent-400'
+                  }`}>
+                    {selectedBook.category === 'fiction' ? 'Fiction' : 'Non-Fiction'}
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-display font-bold text-white">
+                    {selectedBook.title}
+                  </h2>
+                </div>
 
-              <div className="flex items-center gap-2 text-white/60">
-                <Calendar className="w-4 h-4" />
-                <span>{getMonthName(selectedBook.month)} {selectedBook.year}</span>
-              </div>
+                <div className="flex items-center gap-2 text-white/60">
+                  <User className="w-4 h-4" />
+                  <span>{selectedBook.author}</span>
+                </div>
 
-              <div className="pt-4 border-t border-white/10">
-                <h4 className="text-sm font-semibold text-white/80 mb-2">Synopsis</h4>
-                <p className="text-white/60 leading-relaxed">
-                  {selectedBook.synopsis}
-                </p>
+                <div className="flex items-center gap-2 text-white/60">
+                  <Calendar className="w-4 h-4" />
+                  <span>{getMonthName(selectedBook.month)} {selectedBook.year}</span>
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <h4 className="text-sm font-semibold text-white/80 mb-2">Synopsis</h4>
+                  <p className="text-white/60 leading-relaxed">
+                    {selectedBook.synopsis || 'No synopsis available.'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

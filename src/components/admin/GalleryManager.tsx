@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Image as ImageIcon, Video, GripVertical } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/hooks'
 import { GalleryItem } from '@/types/database.types'
 import { Button, Modal, Input, Textarea, Skeleton, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -14,7 +14,7 @@ export function GalleryManager() {
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useMemo(() => createClient(), [])
+  const supabase = useSupabase()
 
   useEffect(() => {
     fetchItems()
