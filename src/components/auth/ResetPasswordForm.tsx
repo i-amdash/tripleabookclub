@@ -35,7 +35,8 @@ export function ResetPasswordForm() {
     mountedRef.current = true
     sessionFoundRef.current = false
     
-    let fallbackTimeoutId: NodeJS.Timeout
+    let fallbackTimeoutId: NodeJS.Timeout | null = null
+    let retryIntervalId: ReturnType<typeof setInterval> | null = null
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -43,21 +44,33 @@ export function ResetPasswordForm() {
       
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
         markSessionValid()
+        if (retryIntervalId) clearInterval(retryIntervalId)
+        if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId)
       }
     })
+
+    const checkForSession = async (): Promise<boolean> => {
+      if (!mountedRef.current || sessionFoundRef.current) return true
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && mountedRef.current) {
+          console.log('Found session on check')
+          markSessionValid()
+          return true
+        }
+      } catch (err) {
+        console.error('Session check error:', err)
+      }
+      return false
+    }
 
     const initializeSession = async () => {
       if (!mountedRef.current) return
       
       try {
         // First, check if there's already a session
-        const { data: { session: existingSession } } = await supabase.auth.getSession()
-        
-        if (existingSession && mountedRef.current) {
-          console.log('Found existing session')
-          markSessionValid()
-          return
-        }
+        if (await checkForSession()) return
 
         // Check if URL has hash tokens (Supabase adds these for password recovery)
         if (typeof window !== 'undefined' && window.location.hash) {
@@ -68,7 +81,7 @@ export function ResetPasswordForm() {
           const refreshToken = params.get('refresh_token')
           const type = params.get('type')
           
-          console.log('URL hash type:', type, 'Has access token:', !!accessToken)
+          console.log('URL hash type:', type, 'Has access token:', !!accessToken, 'Has refresh token:', !!refreshToken)
           
           if (accessToken && refreshToken) {
             // Manually set the session from URL tokens
@@ -87,17 +100,34 @@ export function ResetPasswordForm() {
               return
             } else if (error) {
               console.error('Error setting session:', error)
+              // Token might be expired, don't continue retrying
+              setIsValidSession(false)
+              return
             }
           }
         }
 
-        // Set a fallback timeout - if no session found, mark as invalid
-        fallbackTimeoutId = setTimeout(() => {
-          if (mountedRef.current && !sessionFoundRef.current) {
-            console.log('No session found after timeout')
-            setIsValidSession(false)
+        // Start retry interval - check every 500ms for session
+        let retryCount = 0
+        const maxRetries = 20 // 10 seconds total
+        
+        retryIntervalId = setInterval(async () => {
+          retryCount++
+          console.log(`Session retry ${retryCount}/${maxRetries}`)
+          
+          if (await checkForSession()) {
+            if (retryIntervalId) clearInterval(retryIntervalId)
+            return
           }
-        }, 3000)
+          
+          if (retryCount >= maxRetries) {
+            if (retryIntervalId) clearInterval(retryIntervalId)
+            if (mountedRef.current && !sessionFoundRef.current) {
+              console.log('No session found after all retries')
+              setIsValidSession(false)
+            }
+          }
+        }, 500)
         
       } catch (err) {
         console.error('Session initialization error:', err)
@@ -115,6 +145,7 @@ export function ResetPasswordForm() {
       subscription.unsubscribe()
       clearTimeout(initTimeoutId)
       if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId)
+      if (retryIntervalId) clearInterval(retryIntervalId)
     }
   }, [supabase, markSessionValid])
   const validatePassword = (pwd: string): string | null => {
