@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Input, Button } from '@/components/ui'
-import { useSupabase } from '@/hooks'
 import toast from 'react-hot-toast'
 
 export function ForgotPasswordForm() {
@@ -12,8 +11,6 @@ export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState('')
-
-  const supabase = useSupabase()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,17 +29,17 @@ export function ForgotPasswordForm() {
     setIsLoading(true)
 
     try {
-      // Use production URL in production, otherwise use current origin
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://tripleabookclub.com' 
-        : window.location.origin
-      
-      // Redirect to callback route with type=recovery - callback will exchange code and redirect to reset-password
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${baseUrl}/auth/callback?type=recovery`,
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email')
+      }
 
       setIsSubmitted(true)
       toast.success('Password reset email sent!')

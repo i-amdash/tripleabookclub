@@ -68,36 +68,28 @@ export function UsersManager() {
     setIsSubmitting(true)
 
     try {
-      // Create user via Supabase Auth Admin API (requires service role)
-      // For now, we'll use a workaround - create the user through signUp
-      // In production, this should be done via a secure API route
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.full_name,
-          },
-        },
+      // Create user via API route
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password || null,
+          full_name: formData.full_name,
+          send_invite: !formData.password, // Send invite if no password provided
+        }),
       })
 
-      if (authError) throw authError
+      const data = await response.json()
 
-      if (authData.user) {
-        // Update the profile
-        await supabase
-          .from('profiles')
-          .update({ 
-            full_name: formData.full_name,
-            role: 'member'
-          })
-          .eq('id', authData.user.id)
-
-        toast.success('User created successfully! They will receive a confirmation email.')
-        fetchUsers()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create user')
       }
 
+      toast.success(formData.password 
+        ? 'User created successfully!' 
+        : 'User created! They will receive an invite email.')
+      fetchUsers()
       setShowModal(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed to create user')
@@ -110,11 +102,17 @@ export function UsersManager() {
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email')
+      }
 
       toast.success('Password reset email sent!')
       setShowPasswordModal(false)

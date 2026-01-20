@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { signIn } from 'next-auth/react'
+import { Eye, EyeOff } from 'lucide-react'
 import { Input, Button } from '@/components/ui'
-import { useAuth } from '@/hooks'
 import toast from 'react-hot-toast'
 
 export function LoginForm() {
@@ -16,7 +16,6 @@ export function LoginForm() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const router = useRouter()
-  const { signIn } = useAuth()
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -43,14 +42,14 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      const { error } = await signIn(email, password)
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
 
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password')
-        } else {
-          toast.error(error.message)
-        }
+      if (result?.error) {
+        toast.error(result.error)
         return
       }
 

@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui'
-import { useSupabase } from '@/hooks'
 import toast from 'react-hot-toast'
 
 export function ResetPasswordForm() {
@@ -15,69 +14,17 @@ export function ResetPasswordForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [isValidSession, setIsValidSession] = useState<boolean | null>(null)
-  const mountedRef = useRef(true)
+  const [token, setToken] = useState<string | null>(null)
   
   const router = useRouter()
-  const supabase = useSupabase()
+  const searchParams = useSearchParams()
 
-  // Check if user has a valid session (should already be set by callback route)
+  // Get token from URL
   useEffect(() => {
-    mountedRef.current = true
-    
-    const checkSession = async () => {
-      try {
-        // Give Supabase a moment to sync cookies
-        await new Promise(resolve => setTimeout(resolve, 300))
-        
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!mountedRef.current) return
-        
-        if (session) {
-          console.log('Session found for password reset')
-          setIsValidSession(true)
-        } else {
-          // Try one more time after a short delay
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          if (!mountedRef.current) return
-          
-          const { data: { session: retrySession } } = await supabase.auth.getSession()
-          
-          if (!mountedRef.current) return
-          
-          if (retrySession) {
-            console.log('Session found on retry')
-            setIsValidSession(true)
-          } else {
-            console.log('No valid session found')
-            setIsValidSession(false)
-          }
-        }
-      } catch (err) {
-        console.error('Session check error:', err)
-        if (mountedRef.current) {
-          setIsValidSession(false)
-        }
-      }
-    }
+    const urlToken = searchParams.get('token')
+    setToken(urlToken)
+  }, [searchParams])
 
-    // Also listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event:', event, 'Has session:', !!session)
-      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session && mountedRef.current) {
-        setIsValidSession(true)
-      }
-    })
-
-    checkSession()
-
-    return () => {
-      mountedRef.current = false
-      subscription.unsubscribe()
-    }
-  }, [supabase])
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 8) {
       return 'Password must be at least 8 characters'
@@ -98,6 +45,11 @@ export function ResetPasswordForm() {
     e.preventDefault()
     setError('')
 
+    if (!token) {
+      setError('Invalid reset link')
+      return
+    }
+
     // Validate passwords
     const passwordError = validatePassword(password)
     if (passwordError) {
@@ -113,12 +65,16 @@ export function ResetPasswordForm() {
     setIsLoading(true)
 
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
       })
 
-      if (updateError) {
-        throw updateError
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update password')
       }
 
       setIsSuccess(true)
@@ -137,28 +93,27 @@ export function ResetPasswordForm() {
     }
   }
 
-  // Show loading while checking session
-  if (isValidSession === null) {
+  // Show error if no token
+  if (token === null) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="text-white/60">Verifying your reset link...</p>
+        <p className="text-white/60">Loading...</p>
       </div>
     )
   }
 
-  // Show error if no valid session
-  if (isValidSession === false) {
+  if (!token) {
     return (
       <div className="text-center py-8">
         <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-8 h-8 text-red-400" />
         </div>
         <h3 className="text-xl font-display font-bold text-white mb-2">
-          Invalid or Expired Link
+          Invalid Reset Link
         </h3>
         <p className="text-white/60 mb-6">
-          This password reset link is invalid or has expired. Please request a new one.
+          This password reset link is invalid. Please request a new one.
         </p>
         <Link href="/auth/forgot-password">
           <Button variant="primary">

@@ -1,54 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
-import { Profile, PortalStatus } from '@/types/database.types'
-
-interface AuthState {
-  user: Profile | null
-  isLoading: boolean
-  isInitialized: boolean
-  lastFetchTime: number | null
-  setUser: (user: Profile | null) => void
-  setLoading: (loading: boolean) => void
-  setInitialized: (initialized: boolean) => void
-  reset: () => void
-}
-
-// Auth store with persistence to survive page refreshes
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isLoading: true,
-      isInitialized: false,
-      lastFetchTime: null,
-      setUser: (user) => set({ user, lastFetchTime: Date.now() }),
-      setLoading: (isLoading) => set({ isLoading }),
-      setInitialized: (isInitialized) => set({ isInitialized }),
-      reset: () => set({ user: null, isLoading: false, isInitialized: false, lastFetchTime: null }),
-    }),
-    {
-      name: 'tripleabc-auth-storage',
-      storage: createJSONStorage(() => {
-        // Only use localStorage on client
-        if (typeof window !== 'undefined') {
-          return localStorage
-        }
-        // Return a no-op storage for SSR
-        return {
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        }
-      }),
-      partialize: (state) => ({ 
-        user: state.user,
-        lastFetchTime: state.lastFetchTime,
-      }),
-    }
-  )
-)
+import { PortalStatus } from '@/types/database.types'
 
 interface PortalState {
   status: PortalStatus[]

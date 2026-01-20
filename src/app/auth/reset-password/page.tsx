@@ -1,8 +1,18 @@
+import { Suspense } from 'react'
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm'
 
 export const metadata = {
   title: 'Reset Password',
   description: 'Set a new password for your Triple A Book Club account.',
+}
+
+function LoadingSpinner() {
+  return (
+    <div className="text-center py-8">
+      <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-4" />
+      <p className="text-white/60">Loading...</p>
+    </div>
+  )
 }
 
 export default function ResetPasswordPage() {
@@ -18,7 +28,9 @@ export default function ResetPasswordPage() {
               Enter your new password below.
             </p>
           </div>
-          <ResetPasswordForm />
+          <Suspense fallback={<LoadingSpinner />}>
+            <ResetPasswordForm />
+          </Suspense>
         </div>
       </div>
     </div>

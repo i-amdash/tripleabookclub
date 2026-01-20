@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { SmoothScroll } from '@/components/providers/SmoothScroll'
+import { SessionProvider } from '@/components/providers/SessionProvider'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -72,24 +73,25 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans" suppressHydrationWarning>
-        <SmoothScroll>
-          <div className="relative min-h-screen flex flex-col">
-            {/* Background elements */}
-            <div className="fixed inset-0 -z-10 overflow-hidden">
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl" />
-              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
-              <div className="absolute inset-0 noise pointer-events-none" />
+        <SessionProvider>
+          <SmoothScroll>
+            <div className="relative min-h-screen flex flex-col">
+              {/* Background elements */}
+              <div className="fixed inset-0 -z-10 overflow-hidden">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
+                <div className="absolute inset-0 noise pointer-events-none" />
+              </div>
+              
+              <Navbar />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
             </div>
-            
-            <Navbar />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
-        </SmoothScroll>
-        
-        <Toaster
+          </SmoothScroll>
+          
+          <Toaster
           position="bottom-right"
           toastOptions={{
             duration: 4000,
@@ -114,6 +116,7 @@ export default function RootLayout({
             },
           }}
         />
+        </SessionProvider>
       </body>
     </html>
   )
