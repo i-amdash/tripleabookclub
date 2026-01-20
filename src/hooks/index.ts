@@ -40,29 +40,29 @@ export function useAuth() {
   const supabase = useSupabase()
   const hasMounted = useHasMounted()
   const initRef = useRef(false)
-  const retryCountRef = useRef(0)
-  const maxRetries = 3
+  const abortedRef = useRef(false)
 
   useEffect(() => {
     // Prevent multiple initializations
     if (initRef.current) return
     initRef.current = true
+    abortedRef.current = false
 
     const getUser = async () => {
+      // Check if aborted before starting
+      if (abortedRef.current) return
+
       try {
         setConnectionStatus('connected')
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
+        // Check if aborted after async operation
+        if (abortedRef.current) return
+        
         if (authError) {
-          // Check if it's a network error
-          if (authError.message?.includes('network') || authError.message?.includes('fetch')) {
-            setConnectionStatus('disconnected')
-            if (retryCountRef.current < maxRetries) {
-              retryCountRef.current++
-              setTimeout(getUser, 2000 * retryCountRef.current) // Exponential backoff
-              return
-            }
-          }
+          // Ignore abort errors
+          if (authError.name === 'AbortError' || authError.message?.includes('abort')) return
+          
           console.error('Auth error:', authError)
           setUser(null)
           setLoading(false)
@@ -71,15 +71,20 @@ export function useAuth() {
         }
         
         if (authUser) {
+          // Check if aborted before next async operation
+          if (abortedRef.current) return
+          
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', authUser.id)
             .single()
           
-          if (profileError) {
+          // Check if aborted after async operation
+          if (abortedRef.current) return
+          
+          if (profileError && profileError.name !== 'AbortError') {
             console.error('Profile fetch error:', profileError)
-            // Still set user as null but mark as initialized
           }
           
           setUser(profile || null)
@@ -87,30 +92,28 @@ export function useAuth() {
           setUser(null)
         }
         
-        retryCountRef.current = 0 // Reset retry count on success
         setConnectionStatus('connected')
-      } catch (error) {
+      } catch (error: any) {
+        // Ignore abort errors
+        if (error?.name === 'AbortError' || error?.message?.includes('abort')) return
+        if (abortedRef.current) return
+        
         console.error('Error fetching user:', error)
         setConnectionStatus('disconnected')
-        
-        // Retry logic for network errors
-        if (retryCountRef.current < maxRetries) {
-          retryCountRef.current++
-          setConnectionStatus('reconnecting')
-          setTimeout(getUser, 2000 * retryCountRef.current)
-          return
-        }
-        
         setUser(null)
       } finally {
-        setLoading(false)
-        setInitialized(true)
+        if (!abortedRef.current) {
+          setLoading(false)
+          setInitialized(true)
+        }
       }
     }
 
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (abortedRef.current) return
+      
       if (event === 'SIGNED_OUT') {
         reset()
         resetClient()
@@ -124,23 +127,31 @@ export function useAuth() {
 
       if (session?.user) {
         try {
+          if (abortedRef.current) return
+          
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single()
           
+          if (abortedRef.current) return
           setUser(profile || null)
-        } catch (error) {
-          console.error('Error fetching profile on auth change:', error)
+        } catch (error: any) {
+          if (error?.name !== 'AbortError') {
+            console.error('Error fetching profile on auth change:', error)
+          }
         }
       } else {
         setUser(null)
       }
-      setLoading(false)
+      if (!abortedRef.current) {
+        setLoading(false)
+      }
     })
 
     return () => {
+      abortedRef.current = true
       subscription.unsubscribe()
     }
   }, [supabase, setUser, setLoading, setInitialized, reset, setConnectionStatus])
