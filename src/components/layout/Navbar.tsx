@@ -133,6 +133,14 @@ export function Navbar() {
                               Admin Dashboard
                             </Link>
                           )}
+                          <Link
+                            href="/profile"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <User className="w-4 h-4" />
+                            My Profile
+                          </Link>
                           <button
                             onClick={() => {
                               signOut()
@@ -216,6 +224,9 @@ export function Navbar() {
                           Admin Dashboard
                         </Link>
                       )}
+                      <Link href="/profile" className="btn-secondary">
+                        My Profile
+                      </Link>
                       <button onClick={signOut} className="btn-ghost">
                         Sign Out
                       </button>

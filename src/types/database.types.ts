@@ -191,6 +191,7 @@ export interface Database {
       members: {
         Row: {
           id: string
+          profile_id: string | null
           name: string
           role: string
           bio: string | null
@@ -203,6 +204,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          profile_id?: string | null
           name: string
           role: string
           bio?: string | null
@@ -215,6 +217,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          profile_id?: string | null
           name?: string
           role?: string
           bio?: string | null

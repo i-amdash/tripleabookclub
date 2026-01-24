@@ -61,8 +61,8 @@ export async function POST(request: Request) {
 
     if (password) {
       passwordHash = await hash(password, 12)
-    } else if (send_invite) {
-      // Generate reset token for invite
+    } else {
+      // Always generate reset token if no password provided
       resetToken = crypto.randomBytes(32).toString('hex')
       resetTokenExpiry = new Date(Date.now() + 7 * 24 * 3600000).toISOString() // 7 days
     }
@@ -90,32 +90,63 @@ export async function POST(request: Request) {
       )
     }
 
-    // Send invite email if requested and Resend is configured
-    if (send_invite && resetToken && process.env.RESEND_API_KEY) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tripleabookclub.com'
-      const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`
-
+    // Always send welcome email when user is created
+    if (process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tripleabookclub.com'
+      const loginUrl = `${baseUrl}/auth/login`
 
-      await resend.emails.send({
-        from: 'Triple A Book Club <noreply@tripleabookclub.com>',
-        to: email,
-        subject: 'Welcome to Triple A Book Club - Set Your Password',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #cf6f4e;">Welcome to Triple A Book Club!</h1>
-            <p>Hi ${full_name},</p>
-            <p>You've been invited to join Triple A Book Club. To get started, please set your password by clicking the button below:</p>
-            <a href="${resetUrl}" style="display: inline-block; background-color: #cf6f4e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
-              Set Your Password
-            </a>
-            <p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-            <p style="color: #999; font-size: 12px;">Triple A Book Club</p>
-          </div>
-        `,
-      })
+      if (password) {
+        // Send welcome email with credentials
+        await resend.emails.send({
+          from: 'Triple A Book Club <noreply@tripleabookclub.com>',
+          to: email,
+          subject: 'Welcome to Triple A Book Club - Your Account Details',
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #cf6f4e;">Welcome to Triple A Book Club!</h1>
+              <p>Hi ${full_name},</p>
+              <p>Your account has been created. Here are your login details:</p>
+              <div style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p style="margin: 0;"><strong>Email:</strong> ${email}</p>
+                <p style="margin: 8px 0 0 0;"><strong>Password:</strong> ${password}</p>
+              </div>
+              <p>Click the button below to log in:</p>
+              <a href="${loginUrl}" style="display: inline-block; background-color: #cf6f4e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+                Log In to Your Account
+              </a>
+              <p style="color: #666; font-size: 14px;">For security, we recommend changing your password after your first login.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+              <p style="color: #999; font-size: 12px;">Triple A Book Club</p>
+            </div>
+          `,
+        })
+      } else if (resetToken) {
+        // Send invite email with password setup link
+        const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}`
+        
+        await resend.emails.send({
+          from: 'Triple A Book Club <noreply@tripleabookclub.com>',
+          to: email,
+          subject: 'Welcome to Triple A Book Club - Set Your Password',
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #cf6f4e;">Welcome to Triple A Book Club!</h1>
+              <p>Hi ${full_name},</p>
+              <p>You've been invited to join Triple A Book Club. To get started, please set your password by clicking the button below:</p>
+              <a href="${resetUrl}" style="display: inline-block; background-color: #cf6f4e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+                Set Your Password
+              </a>
+              <p style="color: #666; font-size: 14px;">This link will expire in 7 days.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
+              <p style="color: #999; font-size: 12px;">Triple A Book Club</p>
+            </div>
+          `,
+        })
+      }
+    } else {
+      console.log('RESEND_API_KEY not configured - skipping email')
     }
 
     return NextResponse.json({ 

@@ -1,17 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, User, Shield, ShieldOff, Mail, Key } from 'lucide-react'
+import { Plus, Edit2, Trash2, User, Shield, ShieldOff, Mail, Key, Link2, UserPlus } from 'lucide-react'
 import { useSupabase } from '@/hooks'
-import { Profile } from '@/types/database.types'
+import { Profile, Member } from '@/types/database.types'
 import { Button, Modal, Input, Skeleton } from '@/components/ui'
 import toast from 'react-hot-toast'
 
 export function UsersManager() {
   const [users, setUsers] = useState<Profile[]>([])
+  const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showLinkModal, setShowLinkModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -19,6 +21,7 @@ export function UsersManager() {
 
   useEffect(() => {
     fetchUsers()
+    fetchMembers()
   }, [])
 
   const fetchUsers = async () => {
@@ -29,6 +32,20 @@ export function UsersManager() {
 
     setUsers(data || [])
     setLoading(false)
+  }
+
+  const fetchMembers = async () => {
+    const { data } = await supabase
+      .from('members')
+      .select('*')
+      .order('name', { ascending: true })
+
+    setMembers(data || [])
+  }
+
+  // Get linked member for a profile
+  const getLinkedMember = (profileId: string) => {
+    return members.find(m => m.profile_id === profileId)
   }
 
   const handleToggleAdmin = async (user: Profile) => {
@@ -62,6 +79,42 @@ export function UsersManager() {
   const handleResetPassword = (user: Profile) => {
     setSelectedUser(user)
     setShowPasswordModal(true)
+  }
+
+  const handleLinkMember = (user: Profile) => {
+    setSelectedUser(user)
+    setShowLinkModal(true)
+  }
+
+  const handleLinkSubmit = async (memberId: string | null, createNew: boolean) => {
+    if (!selectedUser) return
+    
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch('/api/member/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId: selectedUser.id,
+          memberId: createNew ? null : memberId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to link member')
+      }
+
+      toast.success(createNew ? 'Member profile created and linked!' : 'Member linked successfully!')
+      fetchMembers()
+      setShowLinkModal(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to link member')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleSubmit = async (formData: { email: string; password: string; full_name: string }) => {
@@ -166,17 +219,39 @@ export function UsersManager() {
                 <div>
                   <h3 className="font-medium text-white">{user.full_name || 'Unnamed User'}</h3>
                   <p className="text-sm text-white/60">{user.email}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    user.role === 'super_admin' 
-                      ? 'bg-primary-500/20 text-primary-400' 
-                      : 'bg-white/10 text-white/60'
-                  }`}>
-                    {user.role === 'super_admin' ? 'Admin' : 'Member'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      user.role === 'super_admin' 
+                        ? 'bg-primary-500/20 text-primary-400' 
+                        : 'bg-white/10 text-white/60'
+                    }`}>
+                      {user.role === 'super_admin' ? 'Admin' : 'Member'}
+                    </span>
+                    {getLinkedMember(user.id) ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 flex items-center gap-1">
+                        <Link2 className="w-3 h-3" />
+                        Linked to: {getLinkedMember(user.id)?.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                        Not linked
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                {!getLinkedMember(user.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleLinkMember(user)}
+                    title="Link to member profile"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -238,6 +313,21 @@ export function UsersManager() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Link to Member Modal */}
+      <Modal
+        isOpen={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        title="Link to Member Profile"
+      >
+        <LinkMemberForm
+          user={selectedUser}
+          members={members.filter(m => !m.profile_id)} // Only show unlinked members
+          onSubmit={handleLinkSubmit}
+          onCancel={() => setShowLinkModal(false)}
+          isLoading={isSubmitting}
+        />
       </Modal>
     </div>
   )
@@ -318,6 +408,104 @@ function UserForm({ onSubmit, onCancel, isLoading }: UserFormProps) {
         </Button>
         <Button type="submit" isLoading={isLoading}>
           Create User
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+interface LinkMemberFormProps {
+  user: Profile | null
+  members: Member[]
+  onSubmit: (memberId: string | null, createNew: boolean) => void
+  onCancel: () => void
+  isLoading: boolean
+}
+
+function LinkMemberForm({ user, members, onSubmit, onCancel, isLoading }: LinkMemberFormProps) {
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('')
+  const [createNew, setCreateNew] = useState(members.length === 0)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (createNew) {
+      onSubmit(null, true)
+    } else if (selectedMemberId) {
+      onSubmit(selectedMemberId, false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-white/70 text-sm">
+        Link <strong className="text-white">{user?.full_name || user?.email}</strong> to a member profile so they can manage their own information.
+      </p>
+
+      {members.length > 0 && (
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:border-primary-500/50 cursor-pointer transition-colors">
+            <input
+              type="radio"
+              name="linkOption"
+              checked={!createNew}
+              onChange={() => setCreateNew(false)}
+              className="w-4 h-4 text-primary-500"
+            />
+            <div>
+              <p className="text-white font-medium">Link to existing member</p>
+              <p className="text-white/50 text-sm">Choose from unlinked member profiles</p>
+            </div>
+          </label>
+
+          {!createNew && (
+            <select
+              value={selectedMemberId}
+              onChange={(e) => setSelectedMemberId(e.target.value)}
+              className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-500"
+            >
+              <option value="">Select a member...</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name} ({member.role})
+                </option>
+              ))}
+            </select>
+          )}
+
+          <label className="flex items-center gap-3 p-3 rounded-lg border border-white/10 hover:border-primary-500/50 cursor-pointer transition-colors">
+            <input
+              type="radio"
+              name="linkOption"
+              checked={createNew}
+              onChange={() => setCreateNew(true)}
+              className="w-4 h-4 text-primary-500"
+            />
+            <div>
+              <p className="text-white font-medium">Create new member profile</p>
+              <p className="text-white/50 text-sm">A new member entry will be created and linked</p>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {members.length === 0 && (
+        <div className="p-4 bg-primary-500/10 border border-primary-500/20 rounded-lg">
+          <p className="text-primary-300 text-sm">
+            No unlinked members found. A new member profile will be created for this user.
+          </p>
+        </div>
+      )}
+
+      <div className="flex gap-3 justify-end pt-4">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          type="submit" 
+          isLoading={isLoading}
+          disabled={!createNew && !selectedMemberId}
+        >
+          {createNew ? 'Create & Link' : 'Link Member'}
         </Button>
       </div>
     </form>

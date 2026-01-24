@@ -6,6 +6,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const isAuthPage = nextUrl.pathname.startsWith('/auth')
   const isAdminPage = nextUrl.pathname.startsWith('/admin')
+  const isProfilePage = nextUrl.pathname.startsWith('/profile')
   const isApiRoute = nextUrl.pathname.startsWith('/api')
   
   // Allow API routes to pass through
@@ -20,6 +21,11 @@ export default auth((req) => {
       return NextResponse.next()
     }
     return NextResponse.redirect(new URL('/', nextUrl))
+  }
+
+  // Protect profile page - require login
+  if (isProfilePage && !isLoggedIn) {
+    return NextResponse.redirect(new URL('/auth/login', nextUrl))
   }
 
   // Protect admin routes
