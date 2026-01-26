@@ -56,8 +56,8 @@ export function SuggestionForm({ category, month, year, onSubmit, onCancel }: Su
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <p className="text-white/60 text-sm">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      <p className="text-white/60 text-xs sm:text-sm">
         Suggest a book for the community to vote on. If your book gets the most votes, 
         it will be our next {category} read!
       </p>
@@ -95,11 +95,11 @@ export function SuggestionForm({ category, month, year, onSubmit, onCancel }: Su
         folder="tripleabookclub/suggestions"
       />
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
-        <Button type="button" variant="ghost" onClick={onCancel}>
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-white/10">
+        <Button type="button" variant="ghost" onClick={onCancel} className="w-full sm:w-auto">
           Cancel
         </Button>
-        <Button type="submit" isLoading={isSubmitting}>
+        <Button type="submit" isLoading={isSubmitting} className="w-full sm:w-auto">
           Submit Suggestion
         </Button>
       </div>

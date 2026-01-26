@@ -74,12 +74,12 @@ export function CloudinaryUpload({
               <button
                 type="button"
                 onClick={() => open()}
-                className="w-full border-2 border-dashed border-white/20 hover:border-primary-500/50 rounded-xl p-6 transition-colors group"
+                className="w-full border-2 border-dashed border-white/20 hover:border-primary-500/50 active:border-primary-500/70 rounded-xl p-4 sm:p-6 transition-colors group touch-manipulation"
               >
-                <div className="flex flex-col items-center gap-2 text-white/60 group-hover:text-primary-400 transition-colors">
-                  <Upload className="w-8 h-8" />
-                  <span className="text-sm font-medium">
-                    Click to upload {resourceType === 'video' ? 'video' : resourceType === 'auto' ? 'file' : 'image'}
+                <div className="flex flex-col items-center gap-1.5 sm:gap-2 text-white/60 group-hover:text-primary-400 group-active:text-primary-400 transition-colors">
+                  <Upload className="w-6 h-6 sm:w-8 sm:h-8" />
+                  <span className="text-xs sm:text-sm font-medium text-center">
+                    Tap to upload {resourceType === 'video' ? 'video' : resourceType === 'auto' ? 'file' : 'image'}
                   </span>
                   <span className="text-xs text-white/40">
                     {resourceType === 'video' ? 'MP4, MOV, AVI' : 'JPG, PNG, GIF, WebP'}
@@ -95,33 +95,33 @@ export function CloudinaryUpload({
                   <video
                     src={preview}
                     controls
-                    className="w-full aspect-video object-contain"
+                    className="w-full aspect-[4/3] sm:aspect-video object-contain"
                   />
                 ) : (
                   <img
                     src={preview}
                     alt="Preview"
-                    className="w-full aspect-video object-contain"
+                    className="w-full aspect-[4/3] sm:aspect-video object-contain"
                   />
                 )}
 
                 {/* Actions overlay */}
-                <div className="absolute top-2 right-2 flex gap-2">
+                <div className="absolute top-2 right-2 flex gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => open()}
-                    className="p-2 rounded-lg bg-dark-950/80 hover:bg-dark-950 text-white/80 hover:text-white transition-colors"
+                    className="p-2.5 sm:p-2 rounded-lg bg-dark-950/90 hover:bg-dark-950 active:bg-dark-800 text-white/80 hover:text-white transition-colors touch-manipulation"
                     title="Change"
                   >
-                    <Upload className="w-4 h-4" />
+                    <Upload className="w-4 h-4 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={handleClear}
-                    className="p-2 rounded-lg bg-dark-950/80 hover:bg-red-500/20 text-white/80 hover:text-red-400 transition-colors"
+                    className="p-2.5 sm:p-2 rounded-lg bg-dark-950/90 hover:bg-red-500/20 active:bg-red-500/30 text-white/80 hover:text-red-400 transition-colors touch-manipulation"
                     title="Remove"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4 sm:w-4 sm:h-4" />
                   </button>
                 </div>
 

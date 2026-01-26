@@ -36,17 +36,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   }, [onClose])
 
   const sizes = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    full: 'max-w-[95vw] h-[90vh]',
+    sm: 'max-w-md w-full',
+    md: 'max-w-lg w-full',
+    lg: 'max-w-2xl w-full',
+    xl: 'max-w-4xl w-full',
+    full: 'max-w-[95vw] w-full',
   }
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -63,19 +63,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'relative w-full glass rounded-2xl shadow-2xl overflow-hidden',
+              'relative w-full glass rounded-2xl shadow-2xl overflow-hidden flex flex-col',
+              size === 'full' ? 'h-[90vh]' : 'max-h-[calc(100vh-32px)] sm:max-h-[calc(100vh-64px)]',
               sizes[size]
             )}
           >
             {/* Header */}
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-                <h2 className="font-display text-xl font-semibold text-white">
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 flex-shrink-0">
+                <h2 className="font-display text-lg sm:text-xl font-semibold text-white pr-2">
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -93,7 +94,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             )}
 
             {/* Content */}
-            <div className={cn('p-6', size === 'full' && 'h-full overflow-y-auto')}>
+            <div className={cn(
+              'p-4 sm:p-6 overflow-y-auto flex-1',
+              size === 'full' && 'h-full'
+            )}>
               {children}
             </div>
           </motion.div>
