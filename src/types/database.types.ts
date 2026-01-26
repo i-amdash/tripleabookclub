@@ -281,6 +281,65 @@ export interface Database {
           updated_at?: string
         }
       }
+      meetups: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          venue_name: string
+          address: string
+          city: string
+          latitude: number | null
+          longitude: number | null
+          google_maps_url: string | null
+          event_date: string
+          end_time: string | null
+          month: number
+          year: number
+          image_url: string | null
+          is_published: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          venue_name: string
+          address: string
+          city?: string
+          latitude?: number | null
+          longitude?: number | null
+          google_maps_url?: string | null
+          event_date: string
+          end_time?: string | null
+          month: number
+          year: number
+          image_url?: string | null
+          is_published?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          venue_name?: string
+          address?: string
+          city?: string
+          latitude?: number | null
+          longitude?: number | null
+          google_maps_url?: string | null
+          event_date?: string
+          end_time?: string | null
+          month?: number
+          year?: number
+          image_url?: string | null
+          is_published?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -305,6 +364,7 @@ export type GalleryItem = Database['public']['Tables']['gallery']['Row']
 export type Member = Database['public']['Tables']['members']['Row']
 export type PortalStatus = Database['public']['Tables']['portal_status']['Row']
 export type SiteContent = Database['public']['Tables']['site_content']['Row']
+export type Meetup = Database['public']['Tables']['meetups']['Row']
 
 // Insert types (for creating data)
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
@@ -315,6 +375,7 @@ export type GalleryItemInsert = Database['public']['Tables']['gallery']['Insert'
 export type MemberInsert = Database['public']['Tables']['members']['Insert']
 export type PortalStatusInsert = Database['public']['Tables']['portal_status']['Insert']
 export type SiteContentInsert = Database['public']['Tables']['site_content']['Insert']
+export type MeetupInsert = Database['public']['Tables']['meetups']['Insert']
 
 // Update types (for updating data)
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -325,4 +386,5 @@ export type GalleryItemUpdate = Database['public']['Tables']['gallery']['Update'
 export type MemberUpdate = Database['public']['Tables']['members']['Update']
 export type PortalStatusUpdate = Database['public']['Tables']['portal_status']['Update']
 export type SiteContentUpdate = Database['public']['Tables']['site_content']['Update']
+export type MeetupUpdate = Database['public']['Tables']['meetups']['Update']
 

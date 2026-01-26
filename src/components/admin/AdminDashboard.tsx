@@ -12,6 +12,7 @@ import {
   BarChart3,
   Plus,
   UserPlus,
+  MapPin,
 } from 'lucide-react'
 import { Tabs, TabPanel } from '@/components/ui'
 import { BooksManager } from './BooksManager'
@@ -21,6 +22,7 @@ import { MembersManager } from './MembersManager'
 import { ContentManager } from './ContentManager'
 import { SuggestionsManager } from './SuggestionsManager'
 import { UsersManager } from './UsersManager'
+import { MeetupsManager } from './MeetupsManager'
 import { useSupabase } from '@/hooks'
 
 interface Stats {
@@ -34,6 +36,7 @@ const tabs = [
   { id: 'books', label: 'Books', icon: <BookOpen className="w-4 h-4" /> },
   { id: 'portal', label: 'Portal Control', icon: <Calendar className="w-4 h-4" /> },
   { id: 'suggestions', label: 'Suggestions', icon: <FileText className="w-4 h-4" /> },
+  { id: 'meetups', label: 'Meet-ups', icon: <MapPin className="w-4 h-4" /> },
   { id: 'gallery', label: 'Gallery', icon: <Image className="w-4 h-4" /> },
   { id: 'members', label: 'Members Display', icon: <Users className="w-4 h-4" /> },
   { id: 'users', label: 'User Accounts', icon: <UserPlus className="w-4 h-4" /> },
@@ -156,6 +159,10 @@ export function AdminDashboard() {
 
           <TabPanel value="suggestions" activeValue={activeTab}>
             <SuggestionsManager />
+          </TabPanel>
+
+          <TabPanel value="meetups" activeValue={activeTab}>
+            <MeetupsManager />
           </TabPanel>
 
           <TabPanel value="gallery" activeValue={activeTab}>

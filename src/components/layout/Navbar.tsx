@@ -15,6 +15,7 @@ const navLinks = [
   { href: '/about', label: 'About' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/members', label: 'Members' },
+  { href: '/meet-ups', label: 'Meet-ups', membersOnly: true },
 ]
 
 export function Navbar() {
@@ -69,28 +70,33 @@ export function Navbar() {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
               <ul className="flex items-center gap-1">
-                {navLinks.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className={cn(
-                        'relative px-4 py-2 text-sm font-medium transition-colors duration-200',
-                        pathname === link.href
-                          ? 'text-white'
-                          : 'text-white/60 hover:text-white'
-                      )}
-                    >
-                      {link.label}
-                      {pathname === link.href && (
-                        <motion.div
-                          layoutId="navbar-indicator"
-                          className="absolute inset-0 bg-white/10 rounded-full -z-10"
-                          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                        />
-                      )}
-                    </Link>
-                  </li>
-                ))}
+                {navLinks.map((link) => {
+                  // Hide members-only links if user is not logged in
+                  if (link.membersOnly && !user) return null
+                  
+                  return (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          'relative px-4 py-2 text-sm font-medium transition-colors duration-200',
+                          pathname === link.href
+                            ? 'text-white'
+                            : 'text-white/60 hover:text-white'
+                        )}
+                      >
+                        {link.label}
+                        {pathname === link.href && (
+                          <motion.div
+                            layoutId="navbar-indicator"
+                            className="absolute inset-0 bg-white/10 rounded-full -z-10"
+                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
 
               {/* Auth Section - Render consistent state on SSR/initial render, then update after hydration */}
@@ -190,26 +196,31 @@ export function Navbar() {
           >
             <div className="absolute inset-0 bg-dark-950/95 backdrop-blur-xl">
               <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8">
-                {navLinks.map((link, index) => (
-                  <motion.div
-                    key={link.href}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Link
-                      href={link.href}
-                      className={cn(
-                        'text-3xl font-display font-bold transition-colors',
-                        pathname === link.href
-                          ? 'text-gradient'
-                          : 'text-white/60 hover:text-white'
-                      )}
+                {navLinks.map((link, index) => {
+                  // Hide members-only links if user is not logged in
+                  if (link.membersOnly && !user) return null
+                  
+                  return (
+                    <motion.div
+                      key={link.href}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
                     >
-                      {link.label}
-                    </Link>
-                  </motion.div>
-                ))}
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          'text-3xl font-display font-bold transition-colors',
+                          pathname === link.href
+                            ? 'text-gradient'
+                            : 'text-white/60 hover:text-white'
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    </motion.div>
+                  )
+                })}
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
