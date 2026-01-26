@@ -150,16 +150,21 @@ export function BooksPageContent() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('suggestions')
-        .insert({
-          ...suggestion,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+      // Use API route to bypass RLS (NextAuth doesn't set Supabase auth.uid())
+      const response = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(suggestion),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit suggestion')
+      }
+
+      const data = await response.json()
 
       setSuggestions(prev => [...prev, data])
       setUserSuggestionCount(prev => prev + 1)
@@ -167,7 +172,7 @@ export function BooksPageContent() {
       toast.success('Book suggestion submitted!')
     } catch (error) {
       console.error('Error submitting suggestion:', error)
-      toast.error('Failed to submit suggestion')
+      toast.error(error instanceof Error ? error.message : 'Failed to submit suggestion')
     }
   }
 
@@ -183,30 +188,28 @@ export function BooksPageContent() {
     }
 
     try {
-      // Add vote (vote_count is automatically incremented by database trigger)
-      const { error: voteError } = await supabase
-        .from('votes')
-        .insert({
-          user_id: user.id,
-          suggestion_id: suggestionId,
-        })
+      // Use API route to bypass RLS (NextAuth doesn't set Supabase auth.uid())
+      const response = await fetch('/api/votes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ suggestion_id: suggestionId }),
+      })
 
-      if (voteError) throw voteError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to record vote')
+      }
 
-      // Wait a moment for trigger to update vote_count, then fetch the updated suggestion
-      await new Promise(resolve => setTimeout(resolve, 100))
-      const { data: updatedSuggestion } = await supabase
-        .from('suggestions')
-        .select('vote_count')
-        .eq('id', suggestionId)
-        .single()
+      const { vote_count } = await response.json()
 
-      // Update local state with the new vote count from database
+      // Update local state with the new vote count from API
       setUserVotes(prev => [...prev, suggestionId])
       setSuggestions(prev =>
         prev.map(s =>
           s.id === suggestionId
-            ? { ...s, vote_count: updatedSuggestion?.vote_count || (s.vote_count || 0) + 1 }
+            ? { ...s, vote_count }
             : s
         ).sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0))
       )
@@ -214,7 +217,7 @@ export function BooksPageContent() {
       toast.success('Vote recorded!')
     } catch (error) {
       console.error('Error voting:', error)
-      toast.error('Failed to record vote')
+      toast.error(error instanceof Error ? error.message : 'Failed to record vote')
     }
   }
 
