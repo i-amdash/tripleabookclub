@@ -49,15 +49,22 @@ export function LoginForm() {
       })
 
       if (result?.error) {
-        toast.error(result.error)
+        // Show user-friendly error message instead of error code
+        toast.error('The email or password you entered is incorrect. Please try again.')
+        return
+      }
+
+      if (!result?.ok) {
+        toast.error('Login failed. Please check your credentials and try again.')
         return
       }
 
       toast.success('Welcome back!')
       router.push('/')
       router.refresh()
-    } catch (error) {
-      toast.error('An unexpected error occurred')
+    } catch (error: any) {
+      console.error('Login error:', error)
+      toast.error('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }

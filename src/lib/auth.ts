@@ -24,50 +24,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required')
-        }
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null
+          }
 
-        const email = credentials.email as string
-        const password = credentials.password as string
+          const email = credentials.email as string
+          const password = credentials.password as string
 
-        const supabase = getSupabaseAdmin()
-        
-        // Fetch user from profiles table
-        const { data: user, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', email.toLowerCase())
-          .single()
+          const supabase = getSupabaseAdmin()
+          
+          // Fetch user from profiles table
+          const { data: user, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', email.toLowerCase())
+            .single()
 
-        if (error || !user) {
-          throw new Error('Invalid email or password')
-        }
+          if (error || !user) {
+            return null
+          }
 
-        // Check if user is active (only if field exists)
-        if (user.is_active === false) {
-          throw new Error('Your account has been deactivated')
-        }
+          // Check if user is active (only if field exists)
+          if (user.is_active === false) {
+            return null
+          }
 
-        // Check if user has a password set
-        if (!user.password_hash) {
-          throw new Error('Please set your password using the forgot password link')
-        }
+          // Check if user has a password set
+          if (!user.password_hash) {
+            return null
+          }
 
-        // Verify password
-        const isValidPassword = await compare(password, user.password_hash)
+          // Verify password
+          const isValidPassword = await compare(password, user.password_hash)
 
-        if (!isValidPassword) {
-          throw new Error('Invalid email or password')
-        }
+          if (!isValidPassword) {
+            return null
+          }
 
-        // Return user object for session
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.full_name,
-          role: user.role,
-          image: user.avatar_url,
+          // Return user object for session
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.full_name,
+            role: user.role,
+            image: user.avatar_url,
+          }
+        } catch (error) {
+          console.error('Authorization error:', error)
+          return null
         }
       },
     }),

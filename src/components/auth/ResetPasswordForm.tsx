@@ -27,16 +27,16 @@ export function ResetPasswordForm() {
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 8) {
-      return 'Password must be at least 8 characters'
+      return 'Password must be at least 8 characters long.'
     }
     if (!/[A-Z]/.test(pwd)) {
-      return 'Password must contain at least one uppercase letter'
+      return 'Password must include at least one uppercase letter (A-Z).'
     }
     if (!/[a-z]/.test(pwd)) {
-      return 'Password must contain at least one lowercase letter'
+      return 'Password must include at least one lowercase letter (a-z).'
     }
     if (!/[0-9]/.test(pwd)) {
-      return 'Password must contain at least one number'
+      return 'Password must include at least one number (0-9).'
     }
     return null
   }
@@ -46,7 +46,7 @@ export function ResetPasswordForm() {
     setError('')
 
     if (!token) {
-      setError('Invalid reset link')
+      setError('Invalid or expired reset link. Please request a new one.')
       return
     }
 
@@ -58,7 +58,7 @@ export function ResetPasswordForm() {
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('Passwords do not match. Please ensure both fields are identical.')
       return
     }
 
@@ -74,7 +74,7 @@ export function ResetPasswordForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to update password')
+        throw new Error(data.error || 'Unable to update password. Please try again.')
       }
 
       setIsSuccess(true)
@@ -86,8 +86,9 @@ export function ResetPasswordForm() {
       }, 2000)
     } catch (err: any) {
       console.error('Password update error:', err)
-      setError(err.message || 'Failed to update password. Please try again.')
-      toast.error('Failed to update password')
+      const errorMessage = err.message || 'Unable to update password. Please try again or request a new reset link.'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

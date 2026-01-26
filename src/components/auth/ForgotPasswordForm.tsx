@@ -38,13 +38,14 @@ export function ForgotPasswordForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset email')
+        throw new Error(data.error || 'Unable to send reset email. Please try again.')
       }
 
       setIsSubmitted(true)
       toast.success('Password reset email sent!')
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email')
+      console.error('Forgot password error:', error)
+      toast.error(error.message || 'Unable to send reset email. Please check your email address and try again.')
     } finally {
       setIsLoading(false)
     }

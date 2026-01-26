@@ -104,7 +104,7 @@ export default function RootLayout({
             },
             success: {
               iconTheme: {
-                primary: '#cf6f4e',
+                primary: '#10b981',
                 secondary: '#fff',
               },
             },
