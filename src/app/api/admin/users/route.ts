@@ -165,3 +165,109 @@ export async function POST(request: Request) {
     )
   }
 }
+
+// GET - Fetch all users (admin only)
+export async function GET() {
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    if (session.user.role !== 'super_admin' && session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+
+    const supabase = getSupabaseAdmin()
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Users fetch error:', error)
+      return NextResponse.json(
+        { error: 'Failed to fetch users' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT - Update user role (admin only)
+export async function PUT(request: Request) {
+  try {
+    const session = await auth()
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    if (session.user.role !== 'super_admin' && session.user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+
+    const body = await request.json()
+    const { id, ...updateData } = body
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = getSupabaseAdmin()
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      console.error('User update error:', error)
+      return NextResponse.json(
+        { error: 'Failed to update user', details: error.message },
+        { status: 500 }
+      )
+    }
+
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(data[0])
+  } catch (error) {
+    console.error('API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

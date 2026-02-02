@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Image as ImageIcon, Video, GripVertical } from 'lucide-react'
-import { useSupabase } from '@/hooks'
 import { GalleryItem } from '@/types/database.types'
 import { Button, Modal, Input, Textarea, Skeleton, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -14,34 +13,39 @@ export function GalleryManager() {
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useSupabase()
-
   useEffect(() => {
     fetchItems()
   }, [])
 
   const fetchItems = async () => {
-    const { data } = await supabase
-      .from('gallery')
-      .select('*')
-      .order('order_index', { ascending: true })
-
-    setItems(data || [])
-    setLoading(false)
+    try {
+      const response = await fetch('/api/gallery')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      setItems(data || [])
+    } catch (error) {
+      console.error('Error fetching gallery:', error)
+      toast.error('Failed to load gallery')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return
 
-    const { error } = await supabase.from('gallery').delete().eq('id', id)
+    try {
+      const response = await fetch(`/api/gallery?id=${id}`, {
+        method: 'DELETE',
+      })
 
-    if (error) {
+      if (!response.ok) throw new Error('Failed to delete')
+
+      setItems(items.filter((i) => i.id !== id))
+      toast.success('Item deleted')
+    } catch (error) {
       toast.error('Failed to delete item')
-      return
     }
-
-    setItems(items.filter((i) => i.id !== id))
-    toast.success('Item deleted')
   }
 
   const handleEdit = (item: GalleryItem) => {
@@ -59,26 +63,29 @@ export function GalleryManager() {
 
     try {
       if (editingItem) {
-        const { error } = await supabase
-          .from('gallery')
-          .update(formData)
-          .eq('id', editingItem.id)
+        const response = await fetch('/api/gallery', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingItem.id, ...formData }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to update')
 
-        setItems(items.map((i) => (i.id === editingItem.id ? { ...i, ...formData } : i)))
+        const updatedItem = await response.json()
+        setItems(items.map((i) => (i.id === editingItem.id ? updatedItem : i)))
         toast.success('Item updated')
       } else {
         const maxOrder = items.length > 0 ? Math.max(...items.map(i => i.order_index)) : 0
-        const { data, error } = await supabase
-          .from('gallery')
-          .insert({ ...formData, order_index: maxOrder + 1 })
-          .select()
-          .single()
+        const response = await fetch('/api/gallery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, order_index: maxOrder + 1 }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to create')
 
-        setItems([...items, data])
+        const newItem = await response.json()
+        setItems([...items, newItem])
         toast.success('Item added')
       }
 

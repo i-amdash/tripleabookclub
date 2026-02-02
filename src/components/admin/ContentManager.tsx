@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Save, FileText } from 'lucide-react'
-import { useSupabase } from '@/hooks'
 import { SiteContent } from '@/types/database.types'
 import { Button, Input, Textarea, Skeleton } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -19,19 +18,22 @@ export function ContentManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
 
-  const supabase = useSupabase()
-
   useEffect(() => {
     fetchContents()
   }, [])
 
   const fetchContents = async () => {
-    const { data } = await supabase
-      .from('site_content')
-      .select('*')
-
-    setContents(data || [])
-    setLoading(false)
+    try {
+      const response = await fetch('/api/content')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      setContents(data || [])
+    } catch (error) {
+      console.error('Error fetching content:', error)
+      toast.error('Failed to load content')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSave = async (page: string, section: string, content: any) => {
@@ -41,26 +43,29 @@ export function ContentManager() {
       const existing = contents.find((c) => c.page === page && c.section === section)
 
       if (existing) {
-        const { error } = await supabase
-          .from('site_content')
-          .update({ content })
-          .eq('id', existing.id)
+        const response = await fetch('/api/content', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: existing.id, content }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to update')
 
+        const updatedContent = await response.json()
         setContents(contents.map((c) =>
-          c.id === existing.id ? { ...c, content } : c
+          c.id === existing.id ? updatedContent : c
         ))
       } else {
-        const { data, error } = await supabase
-          .from('site_content')
-          .insert({ page, section, content })
-          .select()
-          .single()
+        const response = await fetch('/api/content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page, section, content }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to create')
 
-        setContents([...contents, data])
+        const newContent = await response.json()
+        setContents([...contents, newContent])
       }
 
       toast.success('Content saved')

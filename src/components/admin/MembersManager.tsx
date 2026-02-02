@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, User, Eye, EyeOff } from 'lucide-react'
-import { useSupabase } from '@/hooks'
 import { Member } from '@/types/database.types'
 import { Button, Modal, Input, Textarea, Skeleton, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -14,51 +13,58 @@ export function MembersManager() {
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useSupabase()
-
   useEffect(() => {
     fetchMembers()
   }, [])
 
   const fetchMembers = async () => {
-    const { data } = await supabase
-      .from('members')
-      .select('*')
-      .order('order_index', { ascending: true })
-
-    setMembers(data || [])
-    setLoading(false)
+    try {
+      const response = await fetch('/api/members')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      setMembers(data || [])
+    } catch (error) {
+      console.error('Error fetching members:', error)
+      toast.error('Failed to load members')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this member?')) return
 
-    const { error } = await supabase.from('members').delete().eq('id', id)
+    try {
+      const response = await fetch(`/api/members?id=${id}`, {
+        method: 'DELETE',
+      })
 
-    if (error) {
+      if (!response.ok) throw new Error('Failed to delete')
+
+      setMembers(members.filter((m) => m.id !== id))
+      toast.success('Member deleted')
+    } catch (error) {
       toast.error('Failed to delete member')
-      return
     }
-
-    setMembers(members.filter((m) => m.id !== id))
-    toast.success('Member deleted')
   }
 
   const handleToggleVisibility = async (member: Member) => {
-    const { error } = await supabase
-      .from('members')
-      .update({ is_visible: !member.is_visible })
-      .eq('id', member.id)
+    try {
+      const response = await fetch('/api/members', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: member.id, is_visible: !member.is_visible }),
+      })
 
-    if (error) {
+      if (!response.ok) throw new Error('Failed to update')
+
+      setMembers(members.map((m) => 
+        m.id === member.id ? { ...m, is_visible: !m.is_visible } : m
+      ))
+      toast.success(`Member ${member.is_visible ? 'hidden' : 'visible'}`)
+    } catch (error) {
       toast.error('Failed to update visibility')
-      return
     }
-
-    setMembers(members.map((m) => 
-      m.id === member.id ? { ...m, is_visible: !m.is_visible } : m
-    ))
-    toast.success(`Member ${member.is_visible ? 'hidden' : 'visible'}`)
   }
 
   const handleEdit = (member: Member) => {
@@ -76,26 +82,29 @@ export function MembersManager() {
 
     try {
       if (editingMember) {
-        const { error } = await supabase
-          .from('members')
-          .update(formData)
-          .eq('id', editingMember.id)
+        const response = await fetch('/api/members', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingMember.id, ...formData }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to update')
 
-        setMembers(members.map((m) => (m.id === editingMember.id ? { ...m, ...formData } : m)))
+        const updatedMember = await response.json()
+        setMembers(members.map((m) => (m.id === editingMember.id ? updatedMember : m)))
         toast.success('Member updated')
       } else {
         const maxOrder = members.length > 0 ? Math.max(...members.map(m => m.order_index)) : 0
-        const { data, error } = await supabase
-          .from('members')
-          .insert({ ...formData, order_index: maxOrder + 1, is_visible: true })
-          .select()
-          .single()
+        const response = await fetch('/api/members', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...formData, order_index: maxOrder + 1, is_visible: true }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error('Failed to create')
 
-        setMembers([...members, data])
+        const newMember = await response.json()
+        setMembers([...members, newMember])
         toast.success('Member added')
       }
 

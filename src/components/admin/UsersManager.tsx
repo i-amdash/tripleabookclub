@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, User, Shield, ShieldOff, Mail, Key, Link2, UserPlus } from 'lucide-react'
-import { useSupabase } from '@/hooks'
 import { Profile, Member } from '@/types/database.types'
 import { Button, Modal, Input, Skeleton } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -17,30 +16,34 @@ export function UsersManager() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useSupabase()
-
   useEffect(() => {
     fetchUsers()
     fetchMembers()
   }, [])
 
   const fetchUsers = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    setUsers(data || [])
-    setLoading(false)
+    try {
+      const response = await fetch('/api/admin/users')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      setUsers(data || [])
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      toast.error('Failed to load users')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const fetchMembers = async () => {
-    const { data } = await supabase
-      .from('members')
-      .select('*')
-      .order('name', { ascending: true })
-
-    setMembers(data || [])
+    try {
+      const response = await fetch('/api/members')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      setMembers(data || [])
+    } catch (error) {
+      console.error('Error fetching members:', error)
+    }
   }
 
   // Get linked member for a profile
@@ -55,20 +58,22 @@ export function UsersManager() {
       return
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', user.id)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, role: newRole }),
+      })
 
-    if (error) {
+      if (!response.ok) throw new Error('Failed to update')
+
+      setUsers(users.map((u) => 
+        u.id === user.id ? { ...u, role: newRole } : u
+      ))
+      toast.success(`User is now ${newRole === 'super_admin' ? 'an admin' : 'a member'}`)
+    } catch (error) {
       toast.error('Failed to update role')
-      return
     }
-
-    setUsers(users.map((u) => 
-      u.id === user.id ? { ...u, role: newRole } : u
-    ))
-    toast.success(`User is now ${newRole === 'super_admin' ? 'an admin' : 'a member'}`)
   }
 
   const handleAdd = () => {

@@ -23,7 +23,6 @@ import { ContentManager } from './ContentManager'
 import { SuggestionsManager } from './SuggestionsManager'
 import { UsersManager } from './UsersManager'
 import { MeetupsManager } from './MeetupsManager'
-import { useSupabase } from '@/hooks'
 
 interface Stats {
   books: number
@@ -47,25 +46,14 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('books')
   const [stats, setStats] = useState<Stats>({ books: 0, members: 0, suggestions: 0, gallery: 0 })
   const [statsLoading, setStatsLoading] = useState(true)
-  const supabase = useSupabase()
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch all counts in parallel
-        const [booksResult, membersResult, suggestionsResult, galleryResult] = await Promise.all([
-          supabase.from('books').select('id', { count: 'exact', head: true }),
-          supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase.from('suggestions').select('id', { count: 'exact', head: true }),
-          supabase.from('gallery').select('id', { count: 'exact', head: true }),
-        ])
-
-        setStats({
-          books: booksResult.count || 0,
-          members: membersResult.count || 0,
-          suggestions: suggestionsResult.count || 0,
-          gallery: galleryResult.count || 0,
-        })
+        const response = await fetch('/api/admin/stats')
+        if (!response.ok) throw new Error('Failed to fetch')
+        const data = await response.json()
+        setStats(data)
       } catch (error) {
         console.error('Error fetching stats:', error)
       } finally {
@@ -74,7 +62,7 @@ export function AdminDashboard() {
     }
 
     fetchStats()
-  }, [supabase])
+  }, [])
 
   return (
     <div className="min-h-screen pt-24 pb-16">

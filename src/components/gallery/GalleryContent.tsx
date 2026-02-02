@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Play, X, Image as ImageIcon, Video, ZoomIn, Plus } from 'lucide-react'
-import { useSupabase } from '@/hooks'
+import { useAuth } from '@/hooks'
 import { GalleryItem } from '@/types/database.types'
 import { Tabs, TabPanel, Skeleton, Button, Modal, Input, Textarea, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -24,29 +24,26 @@ export function GalleryContent() {
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const galleryRef = useRef<HTMLDivElement>(null)
-  const supabase = useSupabase()
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchGallery = async () => {
-      const { data } = await supabase
-        .from('gallery')
-        .select('*')
-        .order('order_index', { ascending: true })
-
-      setItems(data || [])
-      setLoading(false)
-    }
-
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setIsAuthenticated(!!user)
+      try {
+        const response = await fetch('/api/gallery')
+        if (!response.ok) throw new Error('Failed to fetch')
+        const data = await response.json()
+        setItems(data || [])
+      } catch (error) {
+        console.error('Error fetching gallery:', error)
+        toast.error('Failed to load gallery')
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchGallery()
-    checkAuth()
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     if (!galleryRef.current || loading) return
@@ -91,7 +88,7 @@ export function GalleryContent() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
           <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
           
-          {isAuthenticated && (
+          {user && (
             <Button 
               onClick={() => setShowUploadModal(true)}
               leftIcon={<Plus className="w-4 h-4" />}
@@ -361,8 +358,6 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const supabase = useSupabase()
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -374,29 +369,23 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
     setIsSubmitting(true)
 
     try {
-      // Get the max order index
-      const { data: existingItems } = await supabase
-        .from('gallery')
-        .select('order_index')
-        .order('order_index', { ascending: false })
-        .limit(1)
-
-      const maxOrder = existingItems?.[0]?.order_index || 0
-
-      const { data, error } = await supabase
-        .from('gallery')
-        .insert({
+      const response = await fetch('/api/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           type,
           url: url.trim(),
           title: title.trim(),
           description: description.trim() || null,
-          order_index: maxOrder + 1,
-        })
-        .select()
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to upload')
+      }
 
+      const data = await response.json()
       onSuccess(data)
     } catch (error) {
       toast.error('Failed to upload media. Please try again.')
