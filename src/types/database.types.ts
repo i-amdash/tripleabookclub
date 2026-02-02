@@ -157,6 +157,8 @@ export interface Database {
           url: string
           title: string
           description: string | null
+          month: number
+          year: number
           order_index: number
           created_at: string
           updated_at: string
@@ -167,6 +169,8 @@ export interface Database {
           url: string
           title: string
           description?: string | null
+          month: number
+          year: number
           order_index?: number
           created_at?: string
           updated_at?: string
@@ -177,6 +181,8 @@ export interface Database {
           url?: string
           title?: string
           description?: string | null
+          month?: number
+          year?: number
           order_index?: number
           created_at?: string
           updated_at?: string

@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Image as ImageIcon, Video, GripVertical } from 'lucide-react'
+import { Plus, Edit2, Trash2, Image as ImageIcon, Video, GripVertical, Calendar } from 'lucide-react'
 import { GalleryItem } from '@/types/database.types'
 import { Button, Modal, Input, Textarea, Skeleton, CloudinaryUpload } from '@/components/ui'
 import toast from 'react-hot-toast'
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+]
 
 export function GalleryManager() {
   const [items, setItems] = useState<GalleryItem[]>([])
@@ -144,6 +149,14 @@ export function GalleryManager() {
                 )}
               </div>
 
+              {/* Month/Year badge */}
+              <div className="absolute top-2 right-2 px-2 py-1 rounded-lg bg-dark-950/80 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-primary-400" />
+                <span className="text-xs text-white/80">
+                  {MONTH_NAMES[(item.month || 1) - 1]?.slice(0, 3)} {item.year}
+                </span>
+              </div>
+
               {/* Overlay with actions */}
               <div className="absolute inset-0 bg-dark-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <button
@@ -194,10 +207,16 @@ interface GalleryItemFormProps {
 }
 
 function GalleryItemForm({ item, onSubmit, onCancel, isSubmitting }: GalleryItemFormProps) {
+  const currentDate = new Date()
   const [type, setType] = useState<'image' | 'video'>(item?.type || 'image')
   const [url, setUrl] = useState(item?.url || '')
   const [title, setTitle] = useState(item?.title || '')
   const [description, setDescription] = useState(item?.description || '')
+  const [month, setMonth] = useState(item?.month || currentDate.getMonth() + 1)
+  const [year, setYear] = useState(item?.year || currentDate.getFullYear())
+
+  // Generate year options (current year and 5 years back)
+  const yearOptions = Array.from({ length: 6 }, (_, i) => currentDate.getFullYear() - i)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -212,6 +231,8 @@ function GalleryItemForm({ item, onSubmit, onCancel, isSubmitting }: GalleryItem
       url: url.trim(),
       title: title.trim(),
       description: description.trim() || null,
+      month,
+      year,
     })
   }
 
@@ -226,7 +247,10 @@ function GalleryItemForm({ item, onSubmit, onCancel, isSubmitting }: GalleryItem
               name="type"
               value="image"
               checked={type === 'image'}
-              onChange={() => setType('image')}
+              onChange={() => {
+                setType('image')
+                setUrl('')
+              }}
               className="w-4 h-4 text-primary-500"
             />
             <ImageIcon className="w-4 h-4 text-white/60" />
@@ -238,12 +262,47 @@ function GalleryItemForm({ item, onSubmit, onCancel, isSubmitting }: GalleryItem
               name="type"
               value="video"
               checked={type === 'video'}
-              onChange={() => setType('video')}
+              onChange={() => {
+                setType('video')
+                setUrl('')
+              }}
               className="w-4 h-4 text-primary-500"
             />
             <Video className="w-4 h-4 text-white/60" />
             <span className="text-white/80">Video</span>
           </label>
+        </div>
+      </div>
+
+      {/* Month and Year Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label-text">Month</label>
+          <select
+            value={month}
+            onChange={(e) => setMonth(parseInt(e.target.value))}
+            className="input-field w-full"
+          >
+            {MONTH_NAMES.map((name, index) => (
+              <option key={index} value={index + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label-text">Year</label>
+          <select
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            className="input-field w-full"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

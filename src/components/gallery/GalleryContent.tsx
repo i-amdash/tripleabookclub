@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Play, X, Image as ImageIcon, Video, ZoomIn, Plus } from 'lucide-react'
+import { Play, X, Image as ImageIcon, Video, ZoomIn, Plus, Calendar, ArrowLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/hooks'
 import { GalleryItem } from '@/types/database.types'
 import { Tabs, TabPanel, Skeleton, Button, Modal, Input, Textarea, CloudinaryUpload } from '@/components/ui'
@@ -18,11 +18,26 @@ const tabs = [
   { id: 'video', label: 'Videos', icon: <Video className="w-4 h-4" /> },
 ]
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+]
+
+interface MonthGroup {
+  key: string
+  month: number
+  year: number
+  label: string
+  items: GalleryItem[]
+  thumbnails: string[]
+}
+
 export function GalleryContent() {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState<MonthGroup | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const galleryRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
@@ -50,7 +65,7 @@ export function GalleryContent() {
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        '.gallery-item',
+        '.gallery-item, .month-card',
         { opacity: 0, y: 50, scale: 0.9 },
         {
           opacity: 1,
@@ -69,11 +84,54 @@ export function GalleryContent() {
     }, galleryRef)
 
     return () => ctx.revert()
-  }, [loading, activeTab])
+  }, [loading, activeTab, selectedMonth])
 
   const filteredItems = activeTab === 'all' 
     ? items 
     : items.filter(item => item.type === activeTab)
+
+  // Group items by month and year (using month/year fields from database)
+  const monthGroups = useMemo(() => {
+    const groups: Record<string, MonthGroup> = {}
+    
+    filteredItems.forEach(item => {
+      // Use month and year from database (month is 1-12, convert to 0-11 for array index)
+      const month = (item.month || 1) - 1 // Convert to 0-indexed for MONTH_NAMES array
+      const year = item.year || new Date().getFullYear()
+      const key = `${year}-${month}`
+      
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          month,
+          year,
+          label: `${MONTH_NAMES[month]} ${year}`,
+          items: [],
+          thumbnails: []
+        }
+      }
+      
+      groups[key].items.push(item)
+      // Collect up to 4 thumbnails for the card preview
+      if (groups[key].thumbnails.length < 4) {
+        groups[key].thumbnails.push(item.url)
+      }
+    })
+    
+    // Sort by date (newest first)
+    return Object.values(groups).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      return b.month - a.month
+    })
+  }, [filteredItems])
+
+  // Get items for the selected month, filtered by type
+  const selectedMonthItems = useMemo(() => {
+    if (!selectedMonth) return []
+    return activeTab === 'all' 
+      ? selectedMonth.items 
+      : selectedMonth.items.filter(item => item.type === activeTab)
+  }, [selectedMonth, activeTab])
 
   const handleUploadSuccess = (newItem: GalleryItem) => {
     setItems([...items, newItem])
@@ -81,12 +139,28 @@ export function GalleryContent() {
     toast.success('Media uploaded successfully!')
   }
 
+  const handleBackToMonths = () => {
+    setSelectedMonth(null)
+  }
+
   return (
     <section className="section-padding pt-0">
       <div className="container-main">
         {/* Header with Tabs and Upload Button */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          <div className="flex items-center gap-4">
+            {selectedMonth && (
+              <Button
+                variant="ghost"
+                onClick={handleBackToMonths}
+                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                className="mr-2"
+              >
+                Back
+              </Button>
+            )}
+            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          </div>
           
           {user && (
             <Button 
@@ -98,12 +172,33 @@ export function GalleryContent() {
           )}
         </div>
 
-        {/* Gallery Grid */}
+        {/* Show selected month title */}
+        <AnimatePresence mode="wait">
+          {selectedMonth && (
+            <motion.div
+              key="month-title"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-8"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3">
+                <Calendar className="w-8 h-8 text-primary-500" />
+                {selectedMonth.label}
+              </h2>
+              <p className="text-white/60 mt-2">
+                {selectedMonthItems.length} {selectedMonthItems.length === 1 ? 'item' : 'items'}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Gallery Content */}
         <TabPanel value={activeTab} activeValue={activeTab}>
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded-xl" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-[4/3] rounded-2xl" />
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
@@ -121,16 +216,46 @@ export function GalleryContent() {
               </p>
             </motion.div>
           ) : (
-            <div ref={galleryRef} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredItems.map((item, index) => (
-                <GalleryCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onClick={() => setSelectedItem(item)}
-                />
-              ))}
-            </div>
+            <AnimatePresence mode="wait">
+              {selectedMonth ? (
+                // Show items in the selected month
+                <motion.div
+                  key="month-items"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  ref={galleryRef}
+                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                >
+                  {selectedMonthItems.map((item, index) => (
+                    <GalleryCard
+                      key={item.id}
+                      item={item}
+                      index={index}
+                      onClick={() => setSelectedItem(item)}
+                    />
+                  ))}
+                </motion.div>
+              ) : (
+                // Show month cards
+                <motion.div
+                  key="month-cards"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  ref={galleryRef}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {monthGroups.map((group) => (
+                    <MonthCard
+                      key={group.key}
+                      group={group}
+                      onClick={() => setSelectedMonth(group)}
+                    />
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
         </TabPanel>
       </div>
@@ -141,7 +266,7 @@ export function GalleryContent() {
           <Lightbox
             item={selectedItem}
             onClose={() => setSelectedItem(null)}
-            items={filteredItems}
+            items={selectedMonthItems}
             onNavigate={setSelectedItem}
           />
         )}
@@ -160,6 +285,94 @@ export function GalleryContent() {
         />
       </Modal>
     </section>
+  )
+}
+
+// Month Card Component
+interface MonthCardProps {
+  group: MonthGroup
+  onClick: () => void
+}
+
+function MonthCard({ group, onClick }: MonthCardProps) {
+  const imageCount = group.items.filter(i => i.type === 'image').length
+  const videoCount = group.items.filter(i => i.type === 'video').length
+
+  return (
+    <motion.div
+      className="month-card group cursor-pointer"
+      onClick={onClick}
+      whileHover={{ scale: 1.02, y: -5 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dark-800 to-dark-900 border border-white/10 hover:border-primary-500/50 transition-all duration-300 shadow-xl hover:shadow-primary-500/20">
+        {/* Thumbnail Grid */}
+        <div className="aspect-[4/3] relative">
+          <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 p-0.5">
+            {group.thumbnails.slice(0, 4).map((url, index) => (
+              <div key={index} className="relative overflow-hidden">
+                <img
+                  src={url}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              </div>
+            ))}
+            {/* Fill empty slots with placeholder */}
+            {Array.from({ length: Math.max(0, 4 - group.thumbnails.length) }).map((_, i) => (
+              <div key={`empty-${i}`} className="bg-dark-700/50 flex items-center justify-center">
+                <ImageIcon className="w-8 h-8 text-white/20" />
+              </div>
+            ))}
+          </div>
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/50 to-transparent" />
+          
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 bg-primary-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+
+        {/* Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-5">
+          <div className="flex items-end justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-primary-400 transition-colors">
+                {MONTH_NAMES[group.month]}
+              </h3>
+              <p className="text-4xl font-black text-white/20 -mt-2">{group.year}</p>
+            </div>
+            
+            <div className="text-right">
+              <div className="flex items-center gap-3 text-white/60">
+                {imageCount > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4" />
+                    {imageCount}
+                  </span>
+                )}
+                {videoCount > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Video className="w-4 h-4" />
+                    {videoCount}
+                  </span>
+                )}
+              </div>
+              
+              <div className="mt-2 flex items-center gap-1 text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-sm font-medium">View Gallery</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-4 right-4 p-2 rounded-full bg-white/10 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+          <Calendar className="w-5 h-5 text-white" />
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -352,11 +565,17 @@ interface GalleryUploadFormProps {
 }
 
 function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
+  const currentDate = new Date()
   const [type, setType] = useState<'image' | 'video'>('image')
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [month, setMonth] = useState(currentDate.getMonth() + 1) // 1-12
+  const [year, setYear] = useState(currentDate.getFullYear())
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Generate year options (current year and 5 years back)
+  const yearOptions = Array.from({ length: 6 }, (_, i) => currentDate.getFullYear() - i)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -377,6 +596,8 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
           url: url.trim(),
           title: title.trim(),
           description: description.trim() || null,
+          month,
+          year,
         }),
       })
 
@@ -433,6 +654,38 @@ function GalleryUploadForm({ onSuccess, onCancel }: GalleryUploadFormProps) {
             <Video className="w-4 h-4 text-white/60" />
             <span className="text-white/80">Video</span>
           </label>
+        </div>
+      </div>
+
+      {/* Month and Year Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label-text">Month</label>
+          <select
+            value={month}
+            onChange={(e) => setMonth(parseInt(e.target.value))}
+            className="input-field w-full"
+          >
+            {MONTH_NAMES.map((name, index) => (
+              <option key={index} value={index + 1}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label-text">Year</label>
+          <select
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value))}
+            className="input-field w-full"
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

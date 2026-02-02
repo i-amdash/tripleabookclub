@@ -54,12 +54,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { type, url, title, description, order_index } = body
+    const { type, url, title, description, month, year, order_index } = body
 
     // Validate required fields
-    if (!type || !url || !title) {
+    if (!type || !url || !title || !month || !year) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields (type, url, title, month, year)' },
+        { status: 400 }
+      )
+    }
+
+    // Validate month is 1-12
+    if (month < 1 || month > 12) {
+      return NextResponse.json(
+        { error: 'Month must be between 1 and 12' },
         { status: 400 }
       )
     }
@@ -85,6 +93,8 @@ export async function POST(request: Request) {
         url: url.trim(),
         title: title.trim(),
         description: description?.trim() || null,
+        month,
+        year,
         order_index: finalOrderIndex,
       })
       .select()

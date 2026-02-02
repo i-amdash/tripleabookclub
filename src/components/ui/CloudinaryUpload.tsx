@@ -44,9 +44,13 @@ export function CloudinaryUpload({
         uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
         options={{
           folder,
-          resourceType: resourceType === 'auto' ? 'auto' : resourceType,
+          resourceType: resourceType === 'video' ? 'video' : resourceType === 'auto' ? 'auto' : 'image',
           maxFiles: 1,
           sources: ['local', 'url', 'camera'],
+          // Allow HEIC/HEIF for images and common video formats
+          clientAllowedFormats: resourceType === 'video' 
+            ? ['mp4', 'mov', 'avi', 'webm', 'mkv', 'm4v', 'wmv', 'flv', '3gp']
+            : ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'avif', 'bmp', 'tiff', 'svg'],
           styles: {
             palette: {
               window: '#1a1a2e',
@@ -82,7 +86,7 @@ export function CloudinaryUpload({
                     Tap to upload {resourceType === 'video' ? 'video' : resourceType === 'auto' ? 'file' : 'image'}
                   </span>
                   <span className="text-xs text-white/40">
-                    {resourceType === 'video' ? 'MP4, MOV, AVI' : 'JPG, PNG, GIF, WebP'}
+                    {resourceType === 'video' ? 'MP4, MOV, AVI, WebM' : 'JPG, PNG, GIF, WebP, HEIC'}
                   </span>
                 </div>
               </button>
