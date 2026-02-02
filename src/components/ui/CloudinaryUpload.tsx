@@ -2,7 +2,7 @@
 
 import { CldUploadWidget, CloudinaryUploadWidgetResults } from 'next-cloudinary'
 import { Upload, X, Image as ImageIcon, Video } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface CloudinaryUploadProps {
   value?: string
@@ -34,6 +34,14 @@ export function CloudinaryUpload({
   folder = 'tripleabookclub',
 }: CloudinaryUploadProps) {
   const [preview, setPreview] = useState(value || '')
+  // Use a unique key to force widget recreation when resourceType changes
+  const [widgetKey, setWidgetKey] = useState(0)
+
+  // Force widget recreation when resourceType changes
+  useEffect(() => {
+    setWidgetKey(prev => prev + 1)
+    setPreview('') // Clear preview when switching types
+  }, [resourceType])
 
   const handleUpload = (result: CloudinaryUploadWidgetResults) => {
     if (result.event === 'success' && result.info && typeof result.info !== 'string') {
@@ -54,14 +62,17 @@ export function CloudinaryUpload({
     <div className="space-y-2">
       {label && <label className="label-text">{label}</label>}
       
+      {/* Key forces widget to reinitialize when resourceType changes */}
       <CldUploadWidget
+        key={`upload-${resourceType}-${widgetKey}`}
         uploadPreset={process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET}
         options={{
           folder,
-          resourceType: resourceType === 'video' ? 'video' : resourceType === 'auto' ? 'auto' : 'image',
+          // IMPORTANT: For video uploads to work, your Cloudinary upload preset
+          // must be set to "Auto" delivery type in Cloudinary Dashboard > Settings > Upload Presets
+          resourceType: resourceType,
           maxFiles: 1,
           sources: ['local', 'url', 'camera'],
-          // Don't restrict formats - let Cloudinary handle all formats
           multiple: false,
           styles: {
             palette: {
