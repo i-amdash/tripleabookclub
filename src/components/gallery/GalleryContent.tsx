@@ -148,7 +148,7 @@ export function GalleryContent() {
       <div className="container-main">
         {/* Header with Tabs and Upload Button */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             {selectedMonth && (
               <Button
                 variant="ghost"
