@@ -7,14 +7,14 @@ import { motion } from 'framer-motion'
 import { ArrowRight, BookOpen, Users, Sparkles, User } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useSupabase } from '@/hooks'
-import { Book, Profile } from '@/types/database.types'
+import { Book, Member } from '@/types/database.types'
 import { getCurrentMonthYear, getMonthName } from '@/lib/utils'
 
 export function Hero() {
   const heroRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [currentBook, setCurrentBook] = useState<Book | null>(null)
-  const [randomMembers, setRandomMembers] = useState<Profile[]>([])
+  const [randomMembers, setRandomMembers] = useState<Member[]>([])
   const [memberCount, setMemberCount] = useState(20)
   const [mounted, setMounted] = useState(false)
   const supabase = useSupabase()
@@ -64,11 +64,15 @@ export function Hero() {
     // Fetch random members for avatars
     const fetchRandomMembers = async () => {
       try {
-        const { data, count } = await supabase
-          .from('profiles')
+        const { data } = await supabase
+          .from('members')
           .select('*', { count: 'exact' })
-          .not('avatar_url', 'is', null)
+          .not('image_url', 'is', null)
           .limit(10)
+
+          const { count } = await supabase
+          .from('members')
+          .select('*', { count: 'exact' })
 
         if (data) {
           // Shuffle and take 3 random members
@@ -292,9 +296,9 @@ export function Hero() {
                           key={member.id}
                           className="w-8 h-8 rounded-full border-2 border-dark-900 overflow-hidden bg-dark-800"
                         >
-                          {member.avatar_url ? (
+                          {member.image_url ? (
                             <Image
-                              src={member.avatar_url}
+                              src={member.image_url}
                               alt={member.full_name || 'Member'}
                               width={32}
                               height={32}
