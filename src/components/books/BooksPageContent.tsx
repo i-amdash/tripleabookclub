@@ -24,7 +24,7 @@ export function BooksPageContent() {
   const [loading, setLoading] = useState(true)
   const [initialLoad, setInitialLoad] = useState(true)
   const [showSuggestionModal, setShowSuggestionModal] = useState(false)
-  const [selectedBook, setSelectedBook] = useState<Book | null>(null)
+  const [selectedBook, setSelectedBook] = useState<Book | Suggestion | null>(null)
   const [userSuggestionCount, setUserSuggestionCount] = useState(0)
   const [userVotes, setUserVotes] = useState<string[]>([])
 
@@ -429,7 +429,7 @@ interface BooksGridProps {
   loading: boolean
   userVotes: string[]
   onVote: (id: string) => void
-  onBookClick: (book: Book) => void
+  onBookClick: (book: Book | Suggestion) => void
   category: 'fiction' | 'non-fiction'
 }
 
@@ -491,6 +491,7 @@ function BooksGrid({ books, suggestions, portalStatus, loading, userVotes, onVot
           userVotes={userVotes}
           onVote={onVote}
           isLoggedIn={!!user}
+          onBookClick={onBookClick}
         />
       )}
 

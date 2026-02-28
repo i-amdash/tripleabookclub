@@ -49,6 +49,8 @@ export function MeetupsManager() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    external_url: '',
+    external_url_label: '',
     venue_name: '',
     address: '',
     city: 'Lagos',
@@ -178,6 +180,8 @@ export function MeetupsManager() {
     setFormData({
       title: meetup.title,
       description: meetup.description || '',
+      external_url: meetup.external_url || '',
+      external_url_label: meetup.external_url_label || '',
       venue_name: meetup.venue_name,
       address: meetup.address,
       city: meetup.city || 'Lagos',
@@ -201,6 +205,8 @@ export function MeetupsManager() {
     setFormData({
       title: '',
       description: '',
+      external_url: '',
+      external_url_label: '',
       venue_name: '',
       address: '',
       city: 'Lagos',
@@ -396,6 +402,21 @@ export function MeetupsManager() {
             value={formData.description}
             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           />
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Input
+              label="Custom URL (optional)"
+              placeholder="https://example.com/registration"
+              value={formData.external_url}
+              onChange={(e) => setFormData(prev => ({ ...prev, external_url: e.target.value }))}
+            />
+            <Input
+              label="Custom URL Label (optional)"
+              placeholder="Register Here"
+              value={formData.external_url_label}
+              onChange={(e) => setFormData(prev => ({ ...prev, external_url_label: e.target.value }))}
+            />
+          </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>

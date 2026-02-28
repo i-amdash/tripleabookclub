@@ -11,9 +11,10 @@ interface VotingSectionProps {
   userVotes: string[]
   onVote: (id: string) => void
   isLoggedIn: boolean
+  onBookClick: (book: Suggestion) => void
 }
 
-export function VotingSection({ suggestions, userVotes, onVote, isLoggedIn }: VotingSectionProps) {
+export function VotingSection({ suggestions, userVotes, onVote, isLoggedIn, onBookClick }: VotingSectionProps) {
   if (suggestions.length === 0) {
     return null
   }
@@ -65,6 +66,7 @@ export function VotingSection({ suggestions, userVotes, onVote, isLoggedIn }: Vo
                   showVoteButton={isLoggedIn}
                   hasVoted={userVotes.includes(topSuggestion.id)}
                   onVote={() => onVote(topSuggestion.id)}
+                  onClick={() => onBookClick(topSuggestion)}
                 />
                 <div className="space-y-4">
                   <div>
@@ -100,6 +102,7 @@ export function VotingSection({ suggestions, userVotes, onVote, isLoggedIn }: Vo
                   showVoteButton={isLoggedIn}
                   hasVoted={userVotes.includes(suggestion.id)}
                   onVote={() => onVote(suggestion.id)}
+                  onClick={() => onBookClick(suggestion)}
                 />
               </motion.div>
             ))}

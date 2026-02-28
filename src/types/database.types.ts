@@ -292,6 +292,8 @@ export interface Database {
           id: string
           title: string
           description: string | null
+          external_url: string | null
+          external_url_label: string | null
           venue_name: string
           address: string
           city: string
@@ -311,6 +313,8 @@ export interface Database {
           id?: string
           title: string
           description?: string | null
+          external_url?: string | null
+          external_url_label?: string | null
           venue_name: string
           address: string
           city?: string
@@ -330,6 +334,8 @@ export interface Database {
           id?: string
           title?: string
           description?: string | null
+          external_url?: string | null
+          external_url_label?: string | null
           venue_name?: string
           address?: string
           city?: string
@@ -344,6 +350,26 @@ export interface Database {
           is_published?: boolean
           created_at?: string
           updated_at?: string
+        }
+      }
+      meetup_rsvps: {
+        Row: {
+          id: string
+          meetup_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          meetup_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          meetup_id?: string
+          user_id?: string
+          created_at?: string
         }
       }
     }
@@ -371,6 +397,7 @@ export type Member = Database['public']['Tables']['members']['Row']
 export type PortalStatus = Database['public']['Tables']['portal_status']['Row']
 export type SiteContent = Database['public']['Tables']['site_content']['Row']
 export type Meetup = Database['public']['Tables']['meetups']['Row']
+export type MeetupRsvp = Database['public']['Tables']['meetup_rsvps']['Row']
 
 // Insert types (for creating data)
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
@@ -382,6 +409,7 @@ export type MemberInsert = Database['public']['Tables']['members']['Insert']
 export type PortalStatusInsert = Database['public']['Tables']['portal_status']['Insert']
 export type SiteContentInsert = Database['public']['Tables']['site_content']['Insert']
 export type MeetupInsert = Database['public']['Tables']['meetups']['Insert']
+export type MeetupRsvpInsert = Database['public']['Tables']['meetup_rsvps']['Insert']
 
 // Update types (for updating data)
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -393,4 +421,4 @@ export type MemberUpdate = Database['public']['Tables']['members']['Update']
 export type PortalStatusUpdate = Database['public']['Tables']['portal_status']['Update']
 export type SiteContentUpdate = Database['public']['Tables']['site_content']['Update']
 export type MeetupUpdate = Database['public']['Tables']['meetups']['Update']
-
+export type MeetupRsvpUpdate = Database['public']['Tables']['meetup_rsvps']['Update']

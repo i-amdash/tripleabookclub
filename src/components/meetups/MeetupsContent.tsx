@@ -13,7 +13,9 @@ import {
   CalendarPlus,
   History,
   Sparkles,
-  Building2
+  Building2,
+  Users,
+  Check
 } from 'lucide-react'
 import { Meetup } from '@/types/database.types'
 import { Tabs, TabPanel, Button, Modal } from '@/components/ui'
@@ -25,12 +27,20 @@ const tabs = [
   { id: 'past', label: 'Past Meet-ups', icon: <History className="w-4 h-4" /> },
 ]
 
+interface MeetupWithRsvp extends Meetup {
+  rsvp_count?: number
+  has_rsvped?: boolean
+  rsvp_members?: string[]
+}
+
 export function MeetupsContent() {
   const [activeTab, setActiveTab] = useState('upcoming')
-  const [meetups, setMeetups] = useState<Meetup[]>([])
+  const [meetups, setMeetups] = useState<MeetupWithRsvp[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMap, setExpandedMap] = useState<string | null>(null)
-  const [selectedMeetup, setSelectedMeetup] = useState<Meetup | null>(null)
+  const [selectedMeetup, setSelectedMeetup] = useState<MeetupWithRsvp | null>(null)
+  const [expandedPastYears, setExpandedPastYears] = useState<Record<number, boolean>>({})
+  const [rsvpLoadingMeetupId, setRsvpLoadingMeetupId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMeetups()
@@ -50,17 +60,18 @@ export function MeetupsContent() {
     }
   }
 
-  const now = new Date()
-
   const { upcomingMeetups, pastMeetups, pastMeetupsByYear } = useMemo(() => {
-    const upcoming = meetups.filter(m => new Date(m.event_date) >= now)
+    const now = Date.now()
+    const upcoming = meetups
+      .filter((meetup) => new Date(meetup.event_date).getTime() >= now)
       .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime())
-    
-    const past = meetups.filter(m => new Date(m.event_date) < now)
+
+    const past = meetups
+      .filter((meetup) => new Date(meetup.event_date).getTime() < now)
       .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())
     
     // Group past meetups by year
-    const byYear: Record<number, Meetup[]> = {}
+    const byYear: Record<number, MeetupWithRsvp[]> = {}
     past.forEach(meetup => {
       const year = meetup.year
       if (!byYear[year]) byYear[year] = []
@@ -68,7 +79,20 @@ export function MeetupsContent() {
     })
 
     return { upcomingMeetups: upcoming, pastMeetups: past, pastMeetupsByYear: byYear }
-  }, [meetups, now])
+  }, [meetups])
+
+  useEffect(() => {
+    const years = Object.keys(pastMeetupsByYear).map(Number)
+    const currentYear = new Date().getFullYear()
+
+    setExpandedPastYears(prev => {
+      const next: Record<number, boolean> = {}
+      years.forEach(year => {
+        next[year] = prev[year] ?? year === currentYear
+      })
+      return next
+    })
+  }, [pastMeetupsByYear])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -132,6 +156,71 @@ export function MeetupsContent() {
     if (meetup.google_maps_url) return meetup.google_maps_url
     const query = encodeURIComponent(`${meetup.venue_name}, ${meetup.address}, ${meetup.city}`)
     return `https://www.google.com/maps/dir/?api=1&destination=${query}`
+  }
+
+  const handleRsvp = async (meetupId: string) => {
+    const targetMeetup = meetups.find(meetup => meetup.id === meetupId)
+
+    if (!targetMeetup || targetMeetup.has_rsvped) {
+      return
+    }
+
+    setRsvpLoadingMeetupId(meetupId)
+
+    try {
+      const response = await fetch('/api/meetups/rsvp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meetup_id: meetupId }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to RSVP')
+      }
+
+      const data = await response.json()
+
+      setMeetups(prev =>
+        prev.map(meetup =>
+          meetup.id === meetupId
+            ? {
+                ...meetup,
+                has_rsvped: true,
+                rsvp_count: data.rsvp_count,
+                rsvp_members: data.rsvp_members,
+              }
+            : meetup
+        )
+      )
+
+      setSelectedMeetup(prev =>
+        prev && prev.id === meetupId
+          ? {
+              ...prev,
+              has_rsvped: true,
+              rsvp_count: data.rsvp_count,
+              rsvp_members: data.rsvp_members,
+            }
+          : prev
+      )
+
+      toast.success('RSVP confirmed!')
+    } catch (error) {
+      console.error('RSVP error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to RSVP')
+    } finally {
+      setRsvpLoadingMeetupId(null)
+    }
+  }
+
+  const togglePastYear = (year: number) => {
+    setExpandedPastYears(prev => ({
+      ...prev,
+      [year]: !prev[year],
+    }))
   }
 
   if (loading) {
@@ -204,6 +293,8 @@ export function MeetupsContent() {
                   getGoogleMapsDirectionsUrl={getGoogleMapsDirectionsUrl}
                   formatDate={formatDate}
                   formatTime={formatTime}
+                  onRsvp={handleRsvp}
+                  isRsvpLoading={rsvpLoadingMeetupId === meetup.id}
                   isUpcoming
                 />
               ))}
@@ -228,7 +319,8 @@ export function MeetupsContent() {
                     year={Number(year)}
                     meetups={yearMeetups}
                     onSelectMeetup={setSelectedMeetup}
-                    formatDate={formatDate}
+                    isExpanded={!!expandedPastYears[Number(year)]}
+                    onToggle={() => togglePastYear(Number(year))}
                   />
                 ))}
             </div>
@@ -263,6 +355,17 @@ export function MeetupsContent() {
             {selectedMeetup.description && (
               <p className="text-white/80 leading-relaxed">{selectedMeetup.description}</p>
             )}
+            {selectedMeetup.external_url && (
+              <a
+                href={selectedMeetup.external_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                {selectedMeetup.external_url_label || 'Open meetup link'}
+              </a>
+            )}
           </div>
         )}
       </Modal>
@@ -271,7 +374,7 @@ export function MeetupsContent() {
 }
 
 interface MeetupCardProps {
-  meetup: Meetup
+  meetup: MeetupWithRsvp
   index: number
   isExpanded: boolean
   onToggleMap: () => void
@@ -281,6 +384,8 @@ interface MeetupCardProps {
   getGoogleMapsDirectionsUrl: (meetup: Meetup) => string
   formatDate: (date: string) => string
   formatTime: (date: string) => string
+  onRsvp?: (meetupId: string) => void
+  isRsvpLoading?: boolean
   isUpcoming?: boolean
 }
 
@@ -295,6 +400,8 @@ function MeetupCard({
   getGoogleMapsDirectionsUrl,
   formatDate,
   formatTime,
+  onRsvp,
+  isRsvpLoading = false,
   isUpcoming,
 }: MeetupCardProps) {
   return (
@@ -375,6 +482,18 @@ function MeetupCard({
           <p className="text-white/60 leading-relaxed">{meetup.description}</p>
         )}
 
+        {meetup.external_url && (
+          <a
+            href={meetup.external_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-primary-400 hover:text-primary-300 transition-colors text-sm font-medium"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {meetup.external_url_label || 'Open meetup link'}
+          </a>
+        )}
+
         {/* Mini Map Toggle */}
         <button
           onClick={onToggleMap}
@@ -443,22 +562,48 @@ function MeetupCard({
 
         {/* Action Buttons */}
         {isUpcoming && (
-          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-white/10">
+          <div className="pt-4 border-t border-white/10 space-y-3">
             <Button
-              onClick={() => onAddToCalendar(meetup)}
-              leftIcon={<Download className="w-4 h-4" />}
-              variant="secondary"
-              className="flex-1"
+              onClick={() => onRsvp?.(meetup.id)}
+              leftIcon={meetup.has_rsvped ? <Check className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+              isLoading={isRsvpLoading}
+              disabled={meetup.has_rsvped || !onRsvp}
+              variant={meetup.has_rsvped ? 'secondary' : 'primary'}
+              className="w-full"
             >
-              Download .ics
+              {meetup.has_rsvped ? 'RSVP Confirmed' : 'RSVP for this Meet-up'}
             </Button>
-            <Button
-              onClick={() => onAddToGoogleCalendar(meetup)}
-              leftIcon={<CalendarPlus className="w-4 h-4" />}
-              className="flex-1"
-            >
-              Add to Google Calendar
-            </Button>
+
+            {(meetup.rsvp_count || 0) > 0 && (
+              <div className="rounded-xl bg-white/5 p-3">
+                <p className="text-xs text-white/50 mb-1">
+                  {meetup.rsvp_count} member{meetup.rsvp_count === 1 ? '' : 's'} RSVP&apos;d
+                </p>
+                {meetup.rsvp_members && meetup.rsvp_members.length > 0 && (
+                  <p className="text-sm text-white/70 line-clamp-2">
+                    {meetup.rsvp_members.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={() => onAddToCalendar(meetup)}
+                leftIcon={<Download className="w-4 h-4" />}
+                variant="secondary"
+                className="flex-1"
+              >
+                Download .ics
+              </Button>
+              <Button
+                onClick={() => onAddToGoogleCalendar(meetup)}
+                leftIcon={<CalendarPlus className="w-4 h-4" />}
+                className="flex-1"
+              >
+                Add to Google Calendar
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -468,16 +613,13 @@ function MeetupCard({
 
 interface YearlyMeetupsProps {
   year: number
-  meetups: Meetup[]
-  onSelectMeetup: (meetup: Meetup) => void
-  formatDate: (date: string) => string
+  meetups: MeetupWithRsvp[]
+  onSelectMeetup: (meetup: MeetupWithRsvp) => void
+  isExpanded: boolean
+  onToggle: () => void
 }
 
-function YearlyMeetups({ year, meetups, onSelectMeetup, formatDate }: YearlyMeetupsProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const currentYear = new Date().getFullYear()
-  const isCurrentYear = year === currentYear
-
+function YearlyMeetups({ year, meetups, onSelectMeetup, isExpanded, onToggle }: YearlyMeetupsProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -486,7 +628,7 @@ function YearlyMeetups({ year, meetups, onSelectMeetup, formatDate }: YearlyMeet
     >
       {/* Year Header */}
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={onToggle}
         className="w-full flex items-center justify-between p-2 hover:bg-white/5 rounded-xl transition-colors"
       >
         <div className="flex items-center gap-4">
@@ -508,7 +650,7 @@ function YearlyMeetups({ year, meetups, onSelectMeetup, formatDate }: YearlyMeet
 
       {/* Meetups Grid */}
       <AnimatePresence>
-        {(isExpanded || isCurrentYear) && (
+        {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}

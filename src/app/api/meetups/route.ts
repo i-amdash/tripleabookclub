@@ -13,6 +13,63 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
+function normalizeExternalUrl(value: unknown) {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmedValue = value.trim()
+  if (!trimmedValue) {
+    return null
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmedValue)
+    ? trimmedValue
+    : `https://${trimmedValue}`
+
+  try {
+    return new URL(withProtocol).toString()
+  } catch {
+    return null
+  }
+}
+
+function normalizeUrlLabel(value: unknown) {
+  if (typeof value !== 'string') {
+    return null
+  }
+
+  const trimmedValue = value.trim()
+  return trimmedValue || null
+}
+
+function hasUserInput(value: unknown) {
+  if (typeof value === 'string') {
+    return value.trim().length > 0
+  }
+
+  return value !== null && value !== undefined
+}
+
+function getRsvpMemberName(profileData: unknown) {
+  const normalizedProfile = Array.isArray(profileData) ? profileData[0] : profileData
+
+  if (!normalizedProfile || typeof normalizedProfile !== 'object') {
+    return 'Member'
+  }
+
+  const profile = normalizedProfile as { full_name?: string | null; email?: string | null }
+  if (profile.full_name && profile.full_name.trim()) {
+    return profile.full_name.trim()
+  }
+
+  if (profile.email && profile.email.includes('@')) {
+    return profile.email.split('@')[0]
+  }
+
+  return 'Member'
+}
+
 // GET - Fetch meetups (for authenticated users)
 export async function GET() {
   try {
@@ -48,7 +105,55 @@ export async function GET() {
       )
     }
 
-    return NextResponse.json(data)
+    const meetups = data || []
+    const meetupIds = meetups.map(meetup => meetup.id)
+
+    if (meetupIds.length === 0) {
+      return NextResponse.json(meetups)
+    }
+
+    const { data: rsvps, error: rsvpError } = await supabase
+      .from('meetup_rsvps')
+      .select('meetup_id, user_id, profiles(full_name, email)')
+      .in('meetup_id', meetupIds)
+      .order('created_at', { ascending: true })
+
+    if (rsvpError) {
+      console.error('Meetup RSVP fetch error:', rsvpError)
+      return NextResponse.json(
+        { error: 'Failed to fetch meetup RSVPs' },
+        { status: 500 }
+      )
+    }
+
+    const rsvpByMeetup: Record<string, { rsvp_count: number; rsvp_members: string[]; has_rsvped: boolean }> = {}
+
+    for (const rsvp of rsvps || []) {
+      if (!rsvpByMeetup[rsvp.meetup_id]) {
+        rsvpByMeetup[rsvp.meetup_id] = {
+          rsvp_count: 0,
+          rsvp_members: [],
+          has_rsvped: false,
+        }
+      }
+
+      const target = rsvpByMeetup[rsvp.meetup_id]
+      target.rsvp_count += 1
+      target.rsvp_members.push(getRsvpMemberName(rsvp.profiles))
+
+      if (rsvp.user_id === session.user.id) {
+        target.has_rsvped = true
+      }
+    }
+
+    const enrichedMeetups = meetups.map(meetup => ({
+      ...meetup,
+      rsvp_count: rsvpByMeetup[meetup.id]?.rsvp_count || 0,
+      rsvp_members: rsvpByMeetup[meetup.id]?.rsvp_members || [],
+      has_rsvped: rsvpByMeetup[meetup.id]?.has_rsvped || false,
+    }))
+
+    return NextResponse.json(enrichedMeetups)
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
@@ -87,6 +192,8 @@ export async function POST(request: Request) {
       latitude,
       longitude,
       google_maps_url,
+      external_url,
+      external_url_label,
       event_date,
       end_time,
       month,
@@ -99,6 +206,14 @@ export async function POST(request: Request) {
     if (!title || !venue_name || !address || !event_date || !month || !year) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    const normalizedExternalUrl = normalizeExternalUrl(external_url)
+    if (hasUserInput(external_url) && !normalizedExternalUrl) {
+      return NextResponse.json(
+        { error: 'Custom URL must be a valid URL' },
         { status: 400 }
       )
     }
@@ -116,6 +231,8 @@ export async function POST(request: Request) {
         latitude: latitude || null,
         longitude: longitude || null,
         google_maps_url: google_maps_url || null,
+        external_url: normalizedExternalUrl,
+        external_url_label: normalizedExternalUrl ? normalizeUrlLabel(external_url_label) : null,
         event_date,
         end_time: end_time || null,
         month,
@@ -173,11 +290,34 @@ export async function PUT(request: Request) {
       )
     }
 
+    const sanitizedUpdateData: Record<string, unknown> = { ...updateData }
+
+    if ('external_url' in sanitizedUpdateData) {
+      const normalizedExternalUrl = normalizeExternalUrl(sanitizedUpdateData.external_url)
+
+      if (hasUserInput(sanitizedUpdateData.external_url) && !normalizedExternalUrl) {
+        return NextResponse.json(
+          { error: 'Custom URL must be a valid URL' },
+          { status: 400 }
+        )
+      }
+
+      sanitizedUpdateData.external_url = normalizedExternalUrl
+
+      if (!normalizedExternalUrl && !('external_url_label' in sanitizedUpdateData)) {
+        sanitizedUpdateData.external_url_label = null
+      }
+    }
+
+    if ('external_url_label' in sanitizedUpdateData) {
+      sanitizedUpdateData.external_url_label = normalizeUrlLabel(sanitizedUpdateData.external_url_label)
+    }
+
     const supabase = getSupabaseAdmin()
 
     const { data, error } = await supabase
       .from('meetups')
-      .update(updateData)
+      .update(sanitizedUpdateData)
       .eq('id', id)
       .select()
 
