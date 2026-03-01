@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Calendar, BookOpen, BookMarked, Lock, Unlock, Vote } from 'lucide-react'
 import { PortalStatus } from '@/types/database.types'
 import { Button, Skeleton } from '@/components/ui'
-import { getMonthName, getCurrentMonthYear, getNextMonth } from '@/lib/utils'
+import { getMonthName, getCurrentMonthYear } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export function PortalManager() {
@@ -12,7 +12,6 @@ export function PortalManager() {
   const [loading, setLoading] = useState(true)
 
   const { month, year } = getCurrentMonthYear()
-  const nextMonth = getNextMonth(month, year)
 
   useEffect(() => {
     fetchStatuses()
@@ -110,13 +109,41 @@ export function PortalManager() {
     }
   }
 
-  // Generate periods for the next 6 months
-  const periods = []
-  for (let i = 1; i <= 6; i++) {
-    const targetMonth = ((month + i - 1) % 12) + 1
-    const targetYear = year + Math.floor((month + i - 1) / 12)
-    periods.push({ month: targetMonth, year: targetYear })
-  }
+  // Show a rolling planning window (current + next 6) plus any already-configured periods.
+  // This keeps past reopened months (e.g. March) manageable from admin.
+  const periods = useMemo(() => {
+    const periodMap = new Map<string, { month: number; year: number }>()
+
+    for (let i = 0; i <= 6; i++) {
+      const totalMonths = (month - 1) + i
+      const targetMonth = (totalMonths % 12) + 1
+      const targetYear = year + Math.floor(totalMonths / 12)
+      periodMap.set(`${targetYear}-${targetMonth}`, { month: targetMonth, year: targetYear })
+    }
+
+    statuses.forEach((status) => {
+      periodMap.set(`${status.year}-${status.month}`, { month: status.month, year: status.year })
+    })
+
+    return Array.from(periodMap.values()).sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year
+      return a.month - b.month
+    })
+  }, [month, year, statuses])
+
+  const nonFictionPeriods = useMemo(() => {
+    return periods.filter((period) => {
+      const hasConfiguredNonFiction = statuses.some(
+        (status) =>
+          status.month === period.month &&
+          status.year === period.year &&
+          status.category === 'non-fiction'
+      )
+
+      // Default bi-monthly cadence starts on odd months (Jan, Mar, May...)
+      return hasConfiguredNonFiction || period.month % 2 === 1
+    })
+  }, [periods, statuses])
 
   if (loading) {
     return (
@@ -180,7 +207,7 @@ export function PortalManager() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {periods.filter((_, i) => i % 2 === 0).map((period) => {
+          {nonFictionPeriods.map((period) => {
             const status = statuses.find(
               (s) => s.month === period.month && s.year === period.year && s.category === 'non-fiction'
             )

@@ -8,7 +8,7 @@ import { useAuth, useSupabase } from '@/hooks'
 import { Tabs, TabPanel, BookCard, BookCardSkeleton, Button, Modal } from '@/components/ui'
 import { SuggestionForm } from './SuggestionForm'
 import { VotingSection } from './VotingSection'
-import { getMonthName, getCurrentMonthYear, getNextMonth, getBiMonthlyPeriod } from '@/lib/utils'
+import { getMonthName, getCurrentMonthYear, getNextMonth } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 const tabs = [
@@ -37,10 +37,7 @@ export function BooksPageContent() {
   // Memoize date calculations to prevent re-renders
   const { month, year } = useMemo(() => getCurrentMonthYear(), [])
   const nextMonth = useMemo(() => getNextMonth(month, year), [month, year])
-  const targetMonth = useMemo(() => 
-    activeTab === 'fiction' ? nextMonth.month : getBiMonthlyPeriod(nextMonth.month, nextMonth.year).startMonth,
-    [activeTab, nextMonth.month, nextMonth.year]
-  )
+  const [portalPeriod, setPortalPeriod] = useState({ month: nextMonth.month, year: nextMonth.year })
 
   // Fetch data based on active tab - only depends on activeTab
   useEffect(() => {
@@ -66,31 +63,63 @@ export function BooksPageContent() {
 
         // Only fetch portal status and suggestions for fiction tab
         if (activeTab === 'fiction') {
-          const currentTargetMonth = nextMonth.month
-          
-          const { data: statusData } = await supabase
-            .from('portal_status')
-            .select('*')
-            .eq('month', currentTargetMonth)
-            .eq('year', nextMonth.year)
-            .eq('category', 'fiction')
-            .maybeSingle()
+          const [currentStatusResponse, nextStatusResponse] = await Promise.all([
+            supabase
+              .from('portal_status')
+              .select('*')
+              .eq('month', month)
+              .eq('year', year)
+              .eq('category', 'fiction')
+              .maybeSingle(),
+            supabase
+              .from('portal_status')
+              .select('*')
+              .eq('month', nextMonth.month)
+              .eq('year', nextMonth.year)
+              .eq('category', 'fiction')
+              .maybeSingle()
+          ])
 
           if (!isMounted) return
-          setPortalStatus(statusData)
+
+          const currentStatus = currentStatusResponse.data
+          const nextStatus = nextStatusResponse.data
+
+          const isCurrentOpen = !!(currentStatus?.nomination_open || currentStatus?.voting_open)
+          const nextPeriod = { month: nextMonth.month, year: nextMonth.year }
+          const currentPeriod = { month, year }
+
+          let activeStatus: PortalStatus | null = null
+          let activePeriod = nextPeriod
+
+          if (isCurrentOpen && currentStatus) {
+            activeStatus = currentStatus
+            activePeriod = currentPeriod
+          } else if (nextStatus) {
+            activeStatus = nextStatus
+            activePeriod = nextPeriod
+          } else if (currentStatus) {
+            activeStatus = currentStatus
+            activePeriod = currentPeriod
+          }
+
+          setPortalStatus(activeStatus)
+          setPortalPeriod(activePeriod)
 
           // Fetch suggestions for next month
-          if (statusData?.nomination_open || statusData?.voting_open) {
+          if (activeStatus?.nomination_open || activeStatus?.voting_open) {
             const { data: suggestionsData } = await supabase
               .from('suggestions')
               .select('*, profiles(full_name)')
-              .eq('month', currentTargetMonth)
-              .eq('year', nextMonth.year)
+              .eq('month', activePeriod.month)
+              .eq('year', activePeriod.year)
               .eq('category', 'fiction')
               .order('vote_count', { ascending: false })
 
             if (!isMounted) return
             setSuggestions(suggestionsData || [])
+            setUserSuggestionCount(0)
+            setUserVotes([])
 
             // Count user's suggestions
             const currentUser = userRef.current
@@ -117,6 +146,7 @@ export function BooksPageContent() {
         } else {
           // Clear suggestions for non-fiction tab
           setPortalStatus(null)
+          setPortalPeriod({ month: nextMonth.month, year: nextMonth.year })
           setSuggestions([])
           setUserSuggestionCount(0)
           setUserVotes([])
@@ -221,7 +251,7 @@ export function BooksPageContent() {
     }
   }
 
-  const periodLabel = getMonthName(nextMonth.month)
+  const periodLabel = getMonthName(portalPeriod.month)
 
   return (
     <section className="section-padding pt-0">
@@ -295,8 +325,8 @@ export function BooksPageContent() {
       >
         <SuggestionForm
           category="fiction"
-          month={targetMonth}
-          year={nextMonth.year}
+          month={portalPeriod.month}
+          year={portalPeriod.year}
           onSubmit={handleSuggestionSubmit}
           onCancel={() => setShowSuggestionModal(false)}
         />

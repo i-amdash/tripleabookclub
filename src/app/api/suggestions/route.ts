@@ -194,14 +194,6 @@ export async function PUT(request: Request) {
         )
       }
 
-      // Close voting for this period
-      await supabase
-        .from('portal_status')
-        .update({ voting_open: false, nomination_open: false })
-        .eq('month', suggestion.month)
-        .eq('year', suggestion.year)
-        .eq('category', suggestion.category)
-
       return NextResponse.json({ success: true, message: 'Winner selected' })
     }
 
