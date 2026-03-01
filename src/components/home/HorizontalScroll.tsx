@@ -77,7 +77,7 @@ export function HorizontalScroll() {
                 The Triple A Experience
               </h2>
             </div>
-            <div className="hidden md:flex items-center gap-2 text-white/40">
+            <div className="hidden md:flex items-center pt-16 gap-2 text-white/40">
               <span className="text-sm">Scroll</span>
               <div className="w-20 h-0.5 bg-white/20 relative overflow-hidden">
                 <motion.div

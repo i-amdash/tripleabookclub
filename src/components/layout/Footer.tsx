@@ -1,6 +1,10 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
-import { Instagram, Twitter, Mail, Heart } from 'lucide-react'
+import { FormEvent, useState } from 'react'
+import { Instagram, Twitter } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const footerLinks = {
   navigation: [
@@ -17,13 +21,52 @@ const footerLinks = {
 }
 
 const socialLinks = [
-  { href: '#', icon: Instagram, label: 'Instagram' },
-  { href: '#', icon: Twitter, label: 'Twitter' },
-  { href: 'mailto:hello@tripleabookclub.com', icon: Mail, label: 'Email' },
+  { href: 'https://www.instagram.com/tripleabookclub', icon: Instagram, label: 'Instagram' },
+  { href: 'https://x.com/tripleabookclub', icon: Twitter, label: 'X' },
 ]
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
+  const [email, setEmail] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubscribe = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const trimmedEmail = email.trim().toLowerCase()
+    if (!trimmedEmail) {
+      toast.error('Please enter your email address')
+      return
+    }
+
+    if (!/\S+@\S+\.\S+/.test(trimmedEmail)) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to subscribe')
+      }
+
+      setEmail('')
+      toast.success('Thanks. You are subscribed for updates.')
+    } catch (error) {
+      console.error('Newsletter subscription error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to subscribe')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <footer className="relative mt-auto border-t border-white/10">
@@ -94,14 +137,21 @@ export function Footer() {
             <p className="text-white/60 text-sm mb-4">
               Subscribe to get updates on our latest book picks and events.
             </p>
-            <form className="space-y-3">
+            <form className="space-y-3" onSubmit={handleSubscribe}>
               <input
                 type="email"
                 placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
                 className="input-field text-sm"
               />
-              <button type="submit" className="btn-primary w-full text-sm">
-                Subscribe
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn-primary w-full text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Subscribing...' : 'Subscribe'}
               </button>
             </form>
           </div>

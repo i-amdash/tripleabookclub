@@ -26,7 +26,7 @@ export function VotingSection({ suggestions, userVotes, onVote, isLoggedIn, onBo
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center md:flex-row flex-col justify-between">
         <div>
           <h3 className="text-2xl font-display font-bold text-white mb-2 flex items-center gap-3">
             <Vote className="w-6 h-6 text-primary-400" />
