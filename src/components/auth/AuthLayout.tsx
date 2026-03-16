@@ -33,7 +33,7 @@ export function AuthLayout({
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 mb-12">
+          <Link href="/" className="hidden md:flex items-center gap-3 mb-12">
             <div className="relative w-10 h-10 overflow-hidden rounded-full ring-2 ring-primary-500/20">
               <Image
                 src="/logo.jpg"

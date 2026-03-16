@@ -23,6 +23,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const pathname = usePathname()
+  const isAuthPage = pathname.startsWith('/auth')
   const { user, isLoading, isAdmin, signOut, hasMounted } = useAuth()
 
   useEffect(() => {
@@ -51,7 +52,13 @@ export function Navbar() {
         <div className="container-main">
           <nav className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="relative z-10 flex items-center gap-3 group">
+            <Link
+              href="/"
+              className={cn(
+                'relative z-10 flex items-center gap-3 group',
+                isAuthPage && 'md:hidden'
+              )}
+            >
               <div className="relative w-10 h-10 overflow-hidden rounded-full ring-2 ring-primary-500/20 group-hover:ring-primary-500/50 transition-all duration-300">
                 <Image
                   src="/logo.jpg"
