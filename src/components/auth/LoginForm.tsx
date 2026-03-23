@@ -19,10 +19,11 @@ export function LoginForm() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
+    const normalizedEmail = email.trim().toLowerCase()
 
-    if (!email.trim()) {
+    if (!normalizedEmail) {
       newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       newErrors.email = 'Please enter a valid email'
     }
 
@@ -42,8 +43,10 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
+      const normalizedEmail = email.trim().toLowerCase()
+
       const result = await signIn('credentials', {
-        email,
+        email: normalizedEmail,
         password,
         redirect: false,
       })

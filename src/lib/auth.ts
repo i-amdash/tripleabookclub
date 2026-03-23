@@ -29,7 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null
           }
 
-          const email = credentials.email as string
+          const email = String(credentials.email).trim().toLowerCase()
           const password = credentials.password as string
 
           const supabase = getSupabaseAdmin()
@@ -38,10 +38,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const { data: user, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('email', email.toLowerCase())
-            .single()
+            .eq('email', email)
+            .maybeSingle()
 
-          if (error || !user) {
+          if (error) {
+            console.error('Failed to fetch user during authorize:', error)
+            return null
+          }
+
+          if (!user) {
             return null
           }
 
@@ -100,6 +105,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  logger: {
+    error(error) {
+      const authError = error as Error & { type?: string }
+
+      // Invalid credentials are expected during normal login attempts.
+      if (authError.type === 'CredentialsSignin') return
+      console.error('[auth][error]', error)
+    },
   },
   trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,

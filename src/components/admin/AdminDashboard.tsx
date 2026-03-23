@@ -13,6 +13,7 @@ import {
   Plus,
   UserPlus,
   MapPin,
+  Mail,
 } from 'lucide-react'
 import { Tabs, TabPanel } from '@/components/ui'
 import { BooksManager } from './BooksManager'
@@ -23,6 +24,7 @@ import { ContentManager } from './ContentManager'
 import { SuggestionsManager } from './SuggestionsManager'
 import { UsersManager } from './UsersManager'
 import { MeetupsManager } from './MeetupsManager'
+import { NewsletterManager } from './NewsletterManager'
 
 interface Stats {
   books: number
@@ -39,6 +41,7 @@ const tabs = [
   { id: 'gallery', label: 'Gallery', icon: <Image className="w-4 h-4" /> },
   { id: 'members', label: 'Members Display', icon: <Users className="w-4 h-4" /> },
   { id: 'users', label: 'User Accounts', icon: <UserPlus className="w-4 h-4" /> },
+  { id: 'newsletter', label: 'Newsletter', icon: <Mail className="w-4 h-4" /> },
   { id: 'content', label: 'Site Content', icon: <Settings className="w-4 h-4" /> },
 ]
 
@@ -163,6 +166,10 @@ export function AdminDashboard() {
 
           <TabPanel value="users" activeValue={activeTab}>
             <UsersManager />
+          </TabPanel>
+
+          <TabPanel value="newsletter" activeValue={activeTab}>
+            <NewsletterManager />
           </TabPanel>
 
           <TabPanel value="content" activeValue={activeTab}>
